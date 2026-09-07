@@ -1,3 +1,5 @@
+
+// import '../tamagui.generated.css'
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
@@ -7,10 +9,11 @@ import { useEffect } from 'react';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/components/useColorScheme';
+import { useAppStore } from '@/store/useAppStore';
 
 export {
   // Catch any errors thrown by the Layout component.
-  ErrorBoundary,
+  ErrorBoundary
 } from 'expo-router';
 
 export const unstable_settings = {
@@ -46,13 +49,24 @@ export default function RootLayout() {
 }
 
 function RootLayoutNav() {
+    const sawWelcomeMes = useAppStore((s) => s.sawWelcomeMes);
+    const isLoggedIn = useAppStore((s) => s.isLoggedIn);
   const colorScheme = useColorScheme();
+
+
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+   
+<Stack.Screen name="welcome" options={{ headerShown: false }} />
+         
+          
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+       
+     
+    
       </Stack>
     </ThemeProvider>
   );

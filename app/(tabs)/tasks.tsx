@@ -3,7 +3,9 @@ import { View } from 'react-native'
 
 function tasks() {
   return (
-    <View>Tasks</View>
+    <View>
+      
+    </View>
   )
 }
 

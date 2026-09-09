@@ -30,12 +30,8 @@ export default function DashBoardScreen({ navigation }) {
       >
 
         {/* Header */}
+       
         <View style={styles.header}>
-          <View>
-            <Text style={styles.greeting}>Good evening</Text>
-            <Text style={styles.userName}> 👋</Text>
-          </View>
-
           <Pressable style={styles.profileButton}>
             <Text style={styles.profileText}>M</Text>
           </Pressable>

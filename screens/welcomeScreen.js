@@ -1,45 +1,53 @@
-import React, { useState } from "react";
+import React from "react";
 import {
-    View
-    , Text
-    , StyleSheet
-    , Pressable
-    , SafeAreaView
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  SafeAreaView,
+  Image,
 } from "react-native";
 
-export default function welcomeScreen({ navigation }) {
-    return (
-        <SafeAreaView style={styles.container}>
-            <View style={styles.welcomeScreen}>
+export default function WelcomeScreen({ navigation }) {
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.welcomeScreen}>
 
-             <View style={styles.centerContent}>
-                <Text style={styles.logo}>proGrad</Text>  
+        <View style={styles.centerContent}>
+          <Image
+            style={styles.logo}
+            source={require("../assets/logo.png")}
+          />
 
-            </View>
+	  <Text style={styles.catchpharse}>- Experience in your hands</Text>
+        </View>
 
-                <Pressable
-                style={styles.proceedButton}
-                onPress={() => navigation.navigate("Auth")} 
-                >    
+        <Pressable
+          style={styles.proceedButton}
+          onPress={() => navigation.navigate("Auth")}
+        >
+          <Text style={styles.proceedText}>
+            Continue
+          </Text>
 
-                 <Text style={styles.proceedText}>
-                    Continue
-                 </Text>
-        
-                 <Text style={styles.arrow}>
-                    →
-                 </Text>
-                </Pressable>
+          <Text style={styles.arrow}>
+            →
+          </Text>
+        </Pressable>
 
-
-             
-            </View>
-        </SafeAreaView>
-    )
+      </View>
+    </SafeAreaView>
+  );
 }
 
-
 const styles = StyleSheet.create({
+
+  catchpharse:{
+	  color:"white",
+	  marginTop: -130,
+	  fontSize: 15,
+
+  },
   container: {
     flex: 1,
     backgroundColor: "#000",
@@ -60,22 +68,21 @@ const styles = StyleSheet.create({
   },
 
   logo: {
-    color: "#fff",
-    fontSize: 54,
-    fontWeight: "600",
-    letterSpacing: -2,
+    width: 400,
+    height: 400,
+    resizeMode: "contain",
     marginBottom: 25,
   },
 
-  proceedButton: {
-    height: 70,
-    backgroundColor: "#fff",
-    borderRadius: 15,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
+ proceedButton: {
+  height: 70,
+  width: "100%",
+  backgroundColor: "#fff",
+  borderRadius: 15,
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+},
   proceedText: {
     color: "#000",
     fontSize: 18,

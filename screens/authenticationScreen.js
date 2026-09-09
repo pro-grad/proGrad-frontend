@@ -19,34 +19,14 @@ export default function authenticationScreen ({ navigation }) {
         <SafeAreaView style={styles.container}>
 
             <ScrollView
-              contentContainerStyle={styles.authenticationScreen}
+              contentContainerStyle={styles.authScreen}
               keyboardShouldPersistTaps="handled"
             >
 
-            {/*Return Button*/}
-            <Pressable
-              onPress={() => navigation.goBack()}
-            >
-                <Text style={styles.returnButton}>
-                    ←
-                </Text>
-            </Pressable>
+          
 
-            {/*Header*/}
-
-            <View style={styles.authHeader}>
-
-                <Text style={styles.authTitle}>
-                    {authMode === "login" ? "Login" : "Sign Up"}
-                </Text>
-
-                <Text style={styles.authTitle}>
-                    {authMode === "login" ? "Welcome Back" : "Create Account"}
-                </Text>
-
-            </View>
-
-            {/*Tabs*/}
+        
+{/*Tabs*/}
 
 <View style={styles.tabs}>
 
@@ -67,7 +47,6 @@ export default function authenticationScreen ({ navigation }) {
     </Text>
   </Pressable>
 
-
   <Pressable
     style={[
       styles.tab,
@@ -86,7 +65,6 @@ export default function authenticationScreen ({ navigation }) {
   </Pressable>
 
 </View>
-
 
           {/*Email and Password*/}
 
@@ -129,46 +107,9 @@ export default function authenticationScreen ({ navigation }) {
 
             </Pressable>
 
-            {/* OR */}
-            <View style={styles.dividerContainer}>
-                <View style={styles.divider} />
-
-                <Text style={styles.orText}>
-                    OR
-                </Text>
-                
-                <View style={styles.divider} />
-            </View>
+       
 
 
-            {/*Google button*/}
-            <Pressable style={styles.googleButton}>
-
-                <Text style={styles.googleButton}>
-                    Google
-                </Text>
-
-                <Text style={styles.googleText}>
-                    Continue with Google
-                </Text>
-            </Pressable>
-
-            {/*Switching Accounts*/}
-            
-            <View style={styles.accountSwitch}>
-
-                <Text styles={styles.accountText}>
-                    {authMode === "login" ? "Dont you have an account?" : "Already have an existing account?"}
-                </Text>
-
-                <Pressable onPress={() => setAuthMode(authMode === "login" ? "SignUp" : "login")}>
-                    
-                    <Text style={styles.signUpText}> 
-                        {authMode === "login" ? "SignUp" : "login"}
-                    </Text>
-
-                </Pressable>
-            </View>
 
 
          </ScrollView>
@@ -181,13 +122,15 @@ export default function authenticationScreen ({ navigation }) {
 const styles = StyleSheet.create({
     container: {
     flex: 1,
-    backgroundColor: "#000",
+       backgroundColor: "black",
   },
 
   authScreen: {
     flexGrow: 1,
     paddingHorizontal: 24,
     paddingTop: 20,
+    justifyContent: "center",
+    
     paddingBottom: 50,
   },
 

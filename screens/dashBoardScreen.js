@@ -1,451 +1,357 @@
 import React, { useState } from "react";
-
 import {
   View,
   Text,
   StyleSheet,
+  Pressable,
   SafeAreaView,
   ScrollView,
-  Pressable,
 } from "react-native";
 
-export default function DashBoardScreen({ navigation }) {
-  const [selectedDay, setSelectedDay] = useState(3);
+// ==================================================
+// CALENDAR FUNCTIONS
+// ==================================================
 
-  const days = [
-    { day: "Mon", date: 31 },
-    { day: "Tue", date: 1 },
-    { day: "Wed", date: 2 },
-    { day: "Thu", date: 3 },
-    { day: "Fri", date: 4 },
-    { day: "Sat", date: 5 },
-    { day: "Sun", date: 6 },
+function getTotalDaysInMonth(year, month) {
+  return new Date(year, month + 1, 0).getDate();
+}
+
+function getFirstWeekdayOfMonth(year, month) {
+  return new Date(year, month, 1).getDay();
+}
+
+function getMondayStartOffset(year, month) {
+  const day = getFirstWeekdayOfMonth(year, month);
+  if (day === 0) return 6;
+  return day - 1;
+}
+
+function buildCalendarGrid(year, month) {
+  const startOffset = getMondayStartOffset(year, month);
+  const totalDays = getTotalDaysInMonth(year, month);
+  const grid = [];
+
+  for (let i = 0; i < startOffset; i++) {
+    grid.push(null);
+  }
+
+  for (let day = 1; day <= totalDays; day++) {
+    grid.push(day);
+  }
+
+  return grid;
+}
+
+const monthNames = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+// ==================================================
+// DASHBOARD
+// ==================================================
+
+export default function DashBoardScreen({ navigation }) {
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [selectedDay, setSelectedDay] = useState(new Date());
+
+  const sampleQuests = [
+    { id: 1, title: "Complete a lesson", type: "daily", completed: false },
+    { id: 2, title: "A", type: "daily", completed: false },
+    { id: 3, title: "V", type: "daily", completed: false },
+    { id: 4, title: "B", type: "daily", completed: false },
+    { id: 5, title: "D", type: "daily", completed: false },
+    { id: 6, title: "H", type: "daily", completed: false },
   ];
+
+  const year = currentMonth.getFullYear();
+  const month = currentMonth.getMonth();
+
+  const grid = buildCalendarGrid(year, month);
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView
-        contentContainerStyle={styles.dashboard}
-        showsVerticalScrollIndicator={false}
-      >
-
-        {/* Header */}
-       
-        <View style={styles.header}>
-          <Pressable style={styles.profileButton}>
-            <Text style={styles.profileText}>M</Text>
-          </Pressable>
+      <View style={styles.dashboard}>
+        {/* HEADER */}
+        <View style={styles.dashboardHeader}>
+          <Text style={styles.menuIcon}>☰</Text>
+          <Text style={styles.dashboardLogo}>ProGrad</Text>
+          <Text style={styles.notificationIcon}>🔔</Text>
         </View>
 
-        {/* Progress */}
-        <View style={styles.progressCard}>
-          <View style={styles.progressHeader}>
-            <View>
-              <Text style={styles.progressTitle}>
-                Your Progress
+        {/* DASHBOARD CONTENT */}
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.dashboardContent}
+        >
+          {/* GREETING */}
+          <Text style={styles.greeting}>Hello! 👋</Text>
+          <Text style={styles.dashboardSubtitle}>
+            Stay focused and keep pushing forward.
+          </Text>
+
+          {/* CALENDAR */}
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Calendar</Text>
+
+            <View style={styles.monthHeader}>
+              <Pressable
+                onPress={() =>
+                  setCurrentMonth(new Date(year, month - 1, 1))
+                }
+              >
+                <Text style={styles.monthArrow}>‹</Text>
+              </Pressable>
+
+              <Text style={styles.month}>
+                {monthNames[month]} {year}
               </Text>
 
-              <Text style={styles.progressSubtitle}>
-                Keep going, you're doing great!
-              </Text>
+              <Pressable
+                onPress={() =>
+                  setCurrentMonth(new Date(year, month + 1, 1))
+                }
+              >
+                <Text style={styles.monthArrow}>›</Text>
+              </Pressable>
             </View>
 
-            <Text style={styles.progressPercentage}>
-              68%
-            </Text>
+            <View style={styles.calendarDays}>
+              <Text style={styles.day}>M</Text>
+              <Text style={styles.day}>T</Text>
+              <Text style={styles.day}>W</Text>
+              <Text style={styles.day}>T</Text>
+              <Text style={styles.day}>F</Text>
+              <Text style={styles.day}>S</Text>
+              <Text style={styles.day}>S</Text>
+            </View>
+
+            <View style={styles.calendarNumbers}>
+              {grid.map((number, index) => {
+                const isSelected =
+                  number !== null &&
+                  number === selectedDay.getDate() &&
+                  month === selectedDay.getMonth() &&
+                  year === selectedDay.getFullYear();
+
+                return (
+                  <Pressable
+                    key={index}
+                    disabled={number === null}
+                    onPress={() => {
+                      if (number !== null) {
+                        setSelectedDay(new Date(year, month, number));
+                      }
+                    }}
+                    style={[
+                      styles.calendarNumber,
+                      isSelected && styles.selectedDay,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.numberText,
+                        isSelected && styles.selectedNumber,
+                      ]}
+                    >
+                      {number}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
           </View>
 
-          <View style={styles.progressBackground}>
-            <View style={styles.progressBar} />
-          </View>
-        </View>
+          {/* UPCOMING TASK */}
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Upcoming</Text>
 
-        {/* Calendar */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>
-            This Week
-          </Text>
-
-          <Text style={styles.month}>
-            September 2026
-          </Text>
-        </View>
-
-        <View style={styles.calendar}>
-          {days.map((item) => (
-            <Pressable
-              key={item.date}
-              style={[
-                styles.dayContainer,
-                selectedDay === item.date &&
-                  styles.selectedDay,
-              ]}
-              onPress={() => setSelectedDay(item.date)}
-            >
-              <Text
-                style={[
-                  styles.dayName,
-                  selectedDay === item.date &&
-                    styles.selectedText,
-                ]}
-              >
-                {item.day}
-              </Text>
-
-              <Text
-                style={[
-                  styles.dayNumber,
-                  selectedDay === item.date &&
-                    styles.selectedText,
-                ]}
-              >
-                {item.date}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-
-        {/* Upcoming Task */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>
-            Upcoming
-          </Text>
-
-          <Pressable>
-            <Text style={styles.viewAll}>
-              View all
-            </Text>
-          </Pressable>
-        </View>
-
-        <View style={styles.taskCard}>
-
-          <View style={styles.taskIcon}>
-            <Text style={styles.taskIconText}>
-              ✓
-            </Text>
+            <View style={styles.task}>
+              <View style={styles.taskDot} />
+              <View style={styles.taskInformation}>
+                <Text style={styles.taskTitle}>Study Data Structures</Text>
+                <Text style={styles.taskTime}>10:00 AM - 11:30 AM</Text>
+              </View>
+            </View>
           </View>
 
-          <View style={styles.taskInfo}>
-            <Text style={styles.taskTitle}>
-              Study Data Structures
-            </Text>
+          {/* QUESTS */}
+          <View style={styles.questContainer}>
+            <Text style={styles.questHeading}>Daily Quests</Text>
 
-            <Text style={styles.taskTime}>
-              Today • 10:00 AM - 11:30 AM
-            </Text>
+            {sampleQuests.map((quest) => (
+              <View key={quest.id} style={styles.quest}>
+                <Text style={styles.questText}>{quest.title}</Text>
+              </View>
+            ))}
           </View>
-
-          <Text style={styles.taskArrow}>
-            ›
-          </Text>
-
-        </View>
-
-        {/* Assistant */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>
-            ProGrad Assistant
-          </Text>
-        </View>
-
-        <Pressable style={styles.assistantCard}>
-
-          <View style={styles.assistantIcon}>
-            <Text style={styles.assistantIconText}>
-              ✦
-            </Text>
-          </View>
-
-          <View style={styles.assistantInfo}>
-            <Text style={styles.assistantTitle}>
-              Need some help?
-            </Text>
-
-            <Text style={styles.assistantSubtitle}>
-              Ask me about your studies, schedule or assignments.
-            </Text>
-          </View>
-
-          <Text style={styles.assistantArrow}>
-            →
-          </Text>
-
-        </Pressable>
-
-        {/* Bottom spacing */}
-        <View style={styles.bottomSpacing} />
-
-      </ScrollView>
-
-    
+        </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
+
+// ==================================================
+// STYLES
+// ==================================================
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#000",
   },
-
   dashboard: {
+    flex: 1,
+    backgroundColor: "#000",
+  },
+  dashboardHeader: {
+    height: 70,
     paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 100,
-  },
-
-  /* Header */
-
-  header: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 25,
+    justifyContent: "space-between",
   },
-
-  greeting: {
-    color: "#888",
-    fontSize: 14,
-    marginBottom: 5,
-  },
-
-  userName: {
+  menuIcon: {
     color: "#fff",
     fontSize: 27,
-    fontWeight: "600",
   },
-
-  profileButton: {
-    width: 45,
-    height: 45,
-    borderRadius: 23,
-    backgroundColor: "#fff",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  profileText: {
-    color: "#000",
-    fontSize: 17,
-    fontWeight: "600",
-  },
-
-  /* Progress */
-
-  progressCard: {
-    backgroundColor: "#111",
-    borderRadius: 18,
-    padding: 20,
-    marginBottom: 30,
-    borderWidth: 1,
-    borderColor: "#222",
-  },
-
-  progressHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-
-  progressTitle: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "600",
-  },
-
-  progressSubtitle: {
-    color: "#777",
-    fontSize: 13,
-    marginTop: 6,
-  },
-
-  progressPercentage: {
+  dashboardLogo: {
     color: "#fff",
     fontSize: 22,
     fontWeight: "600",
   },
-
-  progressBackground: {
-    height: 7,
-    backgroundColor: "#292929",
-    borderRadius: 5,
+  notificationIcon: {
+    fontSize: 20,
+  },
+  dashboardContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  greeting: {
+    color: "#fff",
+    fontSize: 32,
+    fontWeight: "600",
     marginTop: 20,
-    overflow: "hidden",
   },
-
-  progressBar: {
-    width: "68%",
-    height: "100%",
-    backgroundColor: "#fff",
-    borderRadius: 5,
+  dashboardSubtitle: {
+    color: "#999",
+    fontSize: 15,
+    marginTop: 8,
+    marginBottom: 25,
   },
-
-  /* Sections */
-
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+  card: {
+    backgroundColor: "#080808",
+    borderWidth: 1,
+    borderColor: "#292929",
+    borderRadius: 15,
+    padding: 18,
     marginBottom: 15,
   },
-
-  sectionTitle: {
+  cardTitle: {
     color: "#fff",
     fontSize: 20,
     fontWeight: "600",
   },
-
+  monthHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 10,
+    marginBottom: 20,
+  },
   month: {
-    color: "#777",
-    fontSize: 13,
-  },
-
-  viewAll: {
     color: "#aaa",
-    fontSize: 13,
+    fontSize: 14,
   },
-
-  /* Calendar */
-
-  calendar: {
+  monthArrow: {
+    color: "#fff",
+    fontSize: 30,
+    paddingHorizontal: 10,
+  },
+  calendarDays: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 30,
   },
-
-  dayContainer: {
-    width: 43,
-    height: 68,
-    borderRadius: 14,
+  day: {
+    color: "#777",
+    width: "14%",
+    textAlign: "center",
+  },
+  calendarNumbers: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginTop: 12,
+  },
+  calendarNumber: {
+    width: "14.28%",
+    height: 40,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#111",
   },
-
+  numberText: {
+    color: "#fff",
+  },
   selectedDay: {
     backgroundColor: "#fff",
+    borderRadius: 20,
   },
-
-  dayName: {
-    color: "#777",
-    fontSize: 11,
-    marginBottom: 8,
-  },
-
-  dayNumber: {
-    color: "#fff",
-    fontSize: 17,
+  selectedNumber: {
+    color: "#000",
     fontWeight: "600",
   },
-
-  selectedText: {
-    color: "#000",
-  },
-
-  /* Task */
-
-  taskCard: {
+  task: {
     backgroundColor: "#111",
-    borderRadius: 17,
-    borderWidth: 1,
-    borderColor: "#222",
-    padding: 17,
+    borderRadius: 12,
+    padding: 15,
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 30,
+    marginTop: 15,
   },
-
-  taskIcon: {
-    width: 45,
-    height: 45,
-    borderRadius: 13,
+  taskDot: {
+    width: 9,
+    height: 9,
     backgroundColor: "#fff",
-    alignItems: "center",
-    justifyContent: "center",
+    borderRadius: 10,
+    marginRight: 12,
   },
-
-  taskIconText: {
-    color: "#000",
-    fontSize: 20,
-    fontWeight: "bold",
-  },
-
-  taskInfo: {
+  taskInformation: {
     flex: 1,
-    marginLeft: 14,
   },
-
   taskTitle: {
     color: "#fff",
     fontSize: 15,
-    fontWeight: "600",
   },
-
   taskTime: {
     color: "#777",
-    fontSize: 12,
+    fontSize: 13,
     marginTop: 6,
   },
-
-  taskArrow: {
-    color: "#777",
-    fontSize: 28,
+  questContainer: {
+    marginBottom: 20,
   },
-
-  /* Assistant */
-
-  assistantCard: {
-    backgroundColor: "#111",
-    borderRadius: 17,
-    borderWidth: 1,
-    borderColor: "#222",
-    padding: 17,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-
-  assistantIcon: {
-    width: 45,
-    height: 45,
-    borderRadius: 13,
-    backgroundColor: "#222",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  assistantIconText: {
+  questHeading: {
     color: "#fff",
-    fontSize: 22,
-  },
-
-  assistantInfo: {
-    flex: 1,
-    marginLeft: 14,
-    marginRight: 10,
-  },
-
-  assistantTitle: {
-    color: "#fff",
-    fontSize: 15,
+    fontSize: 20,
     fontWeight: "600",
+    marginBottom: 12,
   },
-
-  assistantSubtitle: {
-    color: "#777",
-    fontSize: 12,
-    lineHeight: 18,
-    marginTop: 5,
+  quest: {
+    backgroundColor: "#111",
+    borderRadius: 12,
+    padding: 15,
+    marginBottom: 8,
   },
-
-  assistantArrow: {
+  questText: {
     color: "#fff",
-    fontSize: 22,
   },
-
-  bottomSpacing: {
-    height: 20,
-  },
-
-  
 });

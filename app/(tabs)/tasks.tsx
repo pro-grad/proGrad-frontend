@@ -1,5 +1,8 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -7,238 +10,25 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native'
+import { useRouter } from 'expo-router'
+import { initialFieldsData, ProField, Topic } from '../../lib/data'
 
-// ---------- Types ----------
+const initialFields: ProField[] = initialFieldsData
 
-type Question = {
-  id: string
-  question: string
-  answer: string
+type QuestionStatus = 'unanswered' | 'correct' | 'incorrect'
+type QuestionState = {
+  userAnswer: string
+  submitted: boolean
+  revealed: boolean
+  status: QuestionStatus
 }
 
-type Topic = {
-  id: string
-  topicName: string
-  completionDate: string | null
-  questions: Question[]
+const EMPTY_QUESTION_STATE: QuestionState = {
+  userAnswer: '',
+  submitted: false,
+  revealed: false,
+  status: 'unanswered',
 }
-
-type ProField = {
-  id: string
-  name: string
-  topics: Topic[]
-}
-
-// ---------- Dummy data ----------
-// Frontend-only for now — this whole array gets swapped for a real API call later.
-
-const initialFieldsData: ProField[] = [
-  {
-    id: '223423',
-    name: 'Software Engineering',
-    topics: [
-      {
-        id: '03843',
-        topicName: 'Cloud Architecture',
-        completionDate: '2026-09-14',
-        questions: [
-          {
-            id: 'q1',
-            question: 'What is cloud architecture?',
-            answer:
-              'The way components like networks, servers, and storage are arranged to deliver cloud services.',
-          },
-          {
-            id: 'q2',
-            question: 'Name the three main service models.',
-            answer: 'IaaS, PaaS, and SaaS.',
-          },
-        ],
-      },
-      {
-        id: '03844',
-        topicName: 'Data Structures & Algorithms',
-        completionDate: null,
-        questions: [
-          {
-            id: 'q3',
-            question: 'What is the time complexity of inserting at the head of a linked list?',
-            answer: 'O(1).',
-          },
-        ],
-      },
-      {
-        id: '03845',
-        topicName: 'System Design',
-        completionDate: '2026-09-20',
-        questions: [],
-      },
-    ],
-  },
-  {
-    id: '223424',
-    name: 'Accounting',
-    topics: [
-      {
-        id: '04001',
-        topicName: 'Financial Statements',
-        completionDate: '2026-09-11',
-        questions: [
-          {
-            id: 'q4',
-            question: 'What are the three core financial statements?',
-            answer:
-              'The income statement, balance sheet, and statement of cash flows.',
-          },
-        ],
-      },
-      {
-        id: '04002',
-        topicName: 'Double-Entry Bookkeeping',
-        completionDate: null,
-        questions: [
-          {
-            id: 'q5',
-            question: 'What does "debits must equal credits" mean?',
-            answer: 'Every transaction affects at least two accounts and the books must stay balanced.',
-          },
-        ],
-      },
-      {
-        id: '04003',
-        topicName: 'Tax Fundamentals',
-        completionDate: '2026-09-18',
-        questions: [],
-      },
-      {
-        id: '04004',
-        topicName: 'Auditing Principles',
-        completionDate: null,
-        questions: [],
-      },
-    ],
-  },
-  {
-    id: '223425',
-    name: 'Business Management',
-    topics: [
-      {
-        id: '05001',
-        topicName: 'Strategic Planning',
-        completionDate: null,
-        questions: [],
-      },
-      {
-        id: '05002',
-        topicName: 'Operations Management',
-        completionDate: '2026-09-25',
-        questions: [
-          {
-            id: 'q6',
-            question: 'What is the goal of operations management?',
-            answer: 'To run the production of goods or services as efficiently as possible.',
-          },
-        ],
-      },
-      {
-        id: '05003',
-        topicName: 'Leadership & Team Building',
-        completionDate: '2026-09-16',
-        questions: [],
-      },
-    ],
-  },
-  {
-    id: '223426',
-    name: 'Marketing',
-    topics: [
-      {
-        id: '06001',
-        topicName: 'Market Research',
-        completionDate: '2026-09-13',
-        questions: [],
-      },
-      {
-        id: '06002',
-        topicName: 'Branding & Positioning',
-        completionDate: null,
-        questions: [
-          {
-            id: 'q7',
-            question: 'What is a brand positioning statement?',
-            answer: 'A short statement defining who a product is for and why it matters to them.',
-          },
-        ],
-      },
-      {
-        id: '06003',
-        topicName: 'Digital Advertising',
-        completionDate: null,
-        questions: [],
-      },
-    ],
-  },
-  {
-    id: '223427',
-    name: 'Nursing',
-    topics: [
-      {
-        id: '07001',
-        topicName: 'Patient Assessment',
-        completionDate: '2026-09-17',
-        questions: [
-          {
-            id: 'q8',
-            question: 'What are the vital signs typically checked during assessment?',
-            answer: 'Temperature, pulse, respiration rate, and blood pressure.',
-          },
-        ],
-      },
-      {
-        id: '07002',
-        topicName: 'Pharmacology Basics',
-        completionDate: null,
-        questions: [],
-      },
-      {
-        id: '07003',
-        topicName: 'Infection Control',
-        completionDate: '2026-09-22',
-        questions: [],
-      },
-    ],
-  },
-  {
-    id: '223428',
-    name: 'Law',
-    topics: [
-      {
-        id: '08001',
-        topicName: 'Contract Law',
-        completionDate: null,
-        questions: [
-          {
-            id: 'q9',
-            question: 'What are the essential elements of a valid contract?',
-            answer: 'Offer, acceptance, consideration, and mutual intent to be bound.',
-          },
-        ],
-      },
-      {
-        id: '08002',
-        topicName: 'Constitutional Law',
-        completionDate: '2026-09-19',
-        questions: [],
-      },
-      {
-        id: '08003',
-        topicName: 'Legal Writing & Research',
-        completionDate: null,
-        questions: [],
-      },
-    ],
-  },
-]
 
 // ---------- Helpers ----------
 
@@ -255,27 +45,57 @@ function daysUntil(date: string) {
   return diff
 }
 
+// Not wired up yet — there's no backend that can actually grade a free-text
+// answer against the stored answer key. Once that exists, this is where
+// we'd call it, something like:
+//
+//   const result = await api.post('/grade-answer', { userAnswer, correctAnswer })
+//   return result.isCorrect  // true | false | 'partial'
+//
+// For now grading is manual — the person marks themselves right/wrong with
+// the buttons below after comparing their answer to the revealed one.
+function checkAnswerAgainstKey(userAnswer: string, correctAnswer: string): boolean | null {
+  return null
+}
+
 // ---------- Component ----------
 
 function tasks() {
-  const [fieldsData, setFieldsData] = useState<ProField[]>(initialFieldsData)
+  const router = useRouter()
+
+  const [fieldsData, setFieldsData] = useState<ProField[]>(initialFields)
   const [searchInput, setSearchInput] = useState('')
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null)
+  const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null)
 
   const [dateDraftTopicId, setDateDraftTopicId] = useState<string | null>(null)
   const [dateDraftValue, setDateDraftValue] = useState('')
 
-  const [questionDraftTopicId, setQuestionDraftTopicId] = useState<string | null>(null)
-  const [questionDraftText, setQuestionDraftText] = useState('')
-  const [answerDraftText, setAnswerDraftText] = useState('')
+  // How many of the topic's questions the person wants to be quizzed on.
+  // Dummy for now — once the backend exists, this count is what gets sent
+  // to it to generate/pull that many questions instead of just slicing
+  // the local array.
+  const [questionCountInput, setQuestionCountInput] = useState('')
+  const [activeQuestionCount, setActiveQuestionCount] = useState(0)
 
-  const [expandedTopicId, setExpandedTopicId] = useState<string | null>(null)
+  // Quiz progress for whichever topic is currently open. Not part of the
+  // dummy data model itself — resets whenever a new topic opens or
+  // "Refresh questions" is tapped.
+  const [questionStates, setQuestionStates] = useState<Record<string, QuestionState>>({})
+
+  // "Need more info? Ask AI" selection mode — lets the person check off
+  // which questions they want to hand to the AI instead of asking about
+  // the whole topic at once.
+  const [askAiMode, setAskAiMode] = useState(false)
+  const [selectedQuestionIds, setSelectedQuestionIds] = useState<Record<string, boolean>>({})
 
   const filteredFields = fieldsData.filter((field) =>
     field.name.toLowerCase().includes(searchInput.toLowerCase())
   )
 
   const selectedField = fieldsData.find((field) => field.id === selectedFieldId) ?? null
+  const selectedTopic =
+    selectedField?.topics.find((topic) => topic.id === selectedTopicId) ?? null
 
   const upcomingTasks = fieldsData
     .flatMap((field) =>
@@ -284,6 +104,18 @@ function tasks() {
         .map((topic) => ({ ...topic, fieldName: field.name, fieldId: field.id }))
     )
     .sort((a, b) => (a.completionDate! < b.completionDate! ? -1 : 1))
+
+  // Reset quiz progress, question count, and ask-AI selection every time a
+  // different topic opens.
+  useEffect(() => {
+    setQuestionStates({})
+    setAskAiMode(false)
+    setSelectedQuestionIds({})
+    const total = selectedTopic?.questions.length ?? 0
+    setActiveQuestionCount(total)
+    setQuestionCountInput(total > 0 ? String(total) : '')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTopicId])
 
   function updateTopic(topicId: string, updater: (topic: Topic) => Topic) {
     setFieldsData((prev) =>
@@ -303,26 +135,392 @@ function tasks() {
     setDateDraftValue('')
   }
 
-  function addQuestion(topicId: string) {
-    if (!questionDraftText.trim() || !answerDraftText.trim()) return
-    updateTopic(topicId, (topic) => ({
-      ...topic,
-      questions: [
-        ...topic.questions,
-        { id: `${topicId}-${Date.now()}`, question: questionDraftText.trim(), answer: answerDraftText.trim() },
-      ],
+  function updateUserAnswer(questionId: string, text: string) {
+    setQuestionStates((prev) => ({
+      ...prev,
+      [questionId]: { ...(prev[questionId] ?? EMPTY_QUESTION_STATE), userAnswer: text },
     }))
-    setQuestionDraftTopicId(null)
-    setQuestionDraftText('')
-    setAnswerDraftText('')
   }
 
-  // ---------- Field detail view ----------
+  function submitAnswer(questionId: string, correctAnswer: string) {
+    const typed = questionStates[questionId]?.userAnswer ?? ''
+
+    // See checkAnswerAgainstKey above — this doesn't do anything yet.
+    checkAnswerAgainstKey(typed, correctAnswer)
+
+    setQuestionStates((prev) => ({
+      ...prev,
+      [questionId]: {
+        ...(prev[questionId] ?? EMPTY_QUESTION_STATE),
+        userAnswer: typed,
+        submitted: true,
+        revealed: true,
+      },
+    }))
+  }
+
+  function dontKnowAnswer(questionId: string) {
+    setQuestionStates((prev) => ({
+      ...prev,
+      [questionId]: {
+        ...(prev[questionId] ?? EMPTY_QUESTION_STATE),
+        submitted: false,
+        revealed: true,
+      },
+    }))
+  }
+
+  function markAnswer(questionId: string, status: 'correct' | 'incorrect') {
+    setQuestionStates((prev) => ({
+      ...prev,
+      [questionId]: { ...(prev[questionId] ?? EMPTY_QUESTION_STATE), revealed: true, status },
+    }))
+  }
+
+  function resetQuiz() {
+    setQuestionStates({})
+  }
+
+  function applyQuestionCount() {
+    if (!selectedTopic) return
+    const parsed = parseInt(questionCountInput, 10)
+    if (isNaN(parsed) || parsed < 0) return
+    setActiveQuestionCount(Math.min(parsed, selectedTopic.questions.length))
+    setQuestionStates({})
+  }
+
+  function generateNewQuestions() {
+    // Dummy — will call the AI question-generation endpoint later.
+    Alert.alert(
+      'Coming soon',
+      'AI-generated questions for this topic will show up here once the backend is connected. For now, use Refresh to answer the existing questions again.'
+    )
+  }
+
+  // Dummy handoff for a single question's "click to know more" / "go
+  // deeper" link — no real AI wiring yet, just routes to the chat tab
+  // with the question as context.
+  function askAiAboutQuestion(questionText: string) {
+    router.push({
+      pathname: '/chat',
+      params: { prefill: `Can you go deeper on this: "${questionText}"?` },
+    })
+  }
+
+  function toggleAskAiMode() {
+    setAskAiMode((prev) => !prev)
+    setSelectedQuestionIds({})
+  }
+
+  function toggleQuestionSelected(questionId: string) {
+    setSelectedQuestionIds((prev) => ({ ...prev, [questionId]: !prev[questionId] }))
+  }
+
+  // Dummy handoff for the multi-question picker — bundles the selected
+  // questions into one prefill and routes to chat. Same story: real
+  // backend wiring comes later.
+  function askAiAboutSelectedQuestions() {
+    if (!selectedTopic) return
+    const selected = selectedTopic.questions.filter((q) => selectedQuestionIds[q.id])
+    if (selected.length === 0) return
+    const combined = selected.map((q) => `- ${q.question}`).join('\n')
+    router.push({
+      pathname: '/chat',
+      params: { prefill: `Can you help me with these questions?\n${combined}` },
+    })
+    setAskAiMode(false)
+    setSelectedQuestionIds({})
+  }
+
+  // ---------- Topic quiz view (full screen) ----------
+
+  if (selectedTopic && selectedField) {
+    const questionsToShow = selectedTopic.questions.slice(0, activeQuestionCount)
+    const answeredCount = questionsToShow.filter(
+      (q) => questionStates[q.id] && questionStates[q.id].status !== 'unanswered'
+    ).length
+    const selectedCount = Object.values(selectedQuestionIds).filter(Boolean).length
+    const isEditingDate = dateDraftTopicId === selectedTopic.id
+
+    return (
+      <KeyboardAvoidingView
+        style={styles.screen}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      >
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+        >
+          <TouchableOpacity onPress={() => setSelectedTopicId(null)} style={styles.backRow}>
+            <Text style={styles.backArrow}>‹</Text>
+            <Text style={styles.backLabel}>Back to {selectedField.name}</Text>
+          </TouchableOpacity>
+
+          <Text style={styles.title}>{selectedTopic.topicName}</Text>
+          {questionsToShow.length > 0 ? (
+            <Text style={styles.subtitle}>
+              {answeredCount}/{questionsToShow.length} answered
+            </Text>
+          ) : (
+            <Text style={styles.subtitle}>No questions yet</Text>
+          )}
+
+          {/* Target date */}
+          <View style={styles.card}>
+            <Text style={styles.questionsLabel}>
+              How long will it take you to take on an analysis test of your skills of 20
+              questions, 250 questions?
+            </Text>
+            {selectedTopic.completionDate ? (
+              <Text style={styles.topicMeta}>
+                Target · {formatDate(selectedTopic.completionDate)}
+                {daysUntil(selectedTopic.completionDate) >= 0
+                  ? `  ·  ${daysUntil(selectedTopic.completionDate)}d left`
+                  : '  ·  overdue'}
+              </Text>
+            ) : (
+              <Text style={styles.topicMetaMuted}>No target date set</Text>
+            )}
+
+            {isEditingDate ? (
+              <View style={[styles.inlineRow, { marginTop: 10 }]}>
+                <TextInput
+                  placeholder="YYYY-MM-DD"
+                  placeholderTextColor="#6B6B6B"
+                  value={dateDraftValue}
+                  onChangeText={setDateDraftValue}
+                  style={styles.inlineInput}
+                  autoCapitalize="none"
+                />
+                <TouchableOpacity
+                  style={styles.smallButton}
+                  onPress={() => saveCompletionDate(selectedTopic.id)}
+                >
+                  <Text style={styles.smallButtonText}>Save</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={styles.secondaryAction}
+                onPress={() => {
+                  setDateDraftTopicId(selectedTopic.id)
+                  setDateDraftValue(selectedTopic.completionDate ?? '')
+                }}
+              >
+                <Text style={styles.secondaryActionText}>
+                  {selectedTopic.completionDate ? 'Change target date' : '+ Set target date'}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* How many questions */}
+          <View style={styles.card}>
+            <Text style={styles.questionsLabel}>How many questions would you like?</Text>
+            <View style={styles.inlineRow}>
+              <TextInput
+                placeholder="e.g. 10"
+                placeholderTextColor="#6B6B6B"
+                value={questionCountInput}
+                onChangeText={setQuestionCountInput}
+                keyboardType="number-pad"
+                style={styles.inlineInput}
+              />
+              <TouchableOpacity style={styles.smallButton} onPress={applyQuestionCount}>
+                <Text style={styles.smallButtonText}>Set</Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={[styles.topicMetaMuted, { marginTop: 8 }]}>
+              {selectedTopic.questions.length} question
+              {selectedTopic.questions.length === 1 ? '' : 's'} available right now — once the
+              backend's connected this can pull from a much bigger bank.
+            </Text>
+          </View>
+
+          {/* "Need more info" — enters ask-AI selection mode instead of asking right away */}
+          {!askAiMode && (
+            <TouchableOpacity
+              style={styles.askAiCard}
+              onPress={toggleAskAiMode}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.askAiText}>💬 Need more info? Ask AI</Text>
+              <Text style={styles.chevron}>›</Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Refresh / generate new questions */}
+          {!askAiMode && (
+            <View style={[styles.inlineRow, { marginTop: 16 }]}>
+              <TouchableOpacity style={styles.smallButtonGhost} onPress={resetQuiz}>
+                <Text style={styles.smallButtonGhostText}>↻ Refresh questions</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.smallButtonGhost} onPress={generateNewQuestions}>
+                <Text style={styles.smallButtonGhostText}>✨ New questions</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {askAiMode ? (
+            <>
+              <Text style={styles.sectionHeading}>Select questions to ask AI</Text>
+
+              {questionsToShow.length === 0 && (
+                <Text style={styles.emptyText}>No questions yet for this topic.</Text>
+              )}
+
+              {questionsToShow.map((q) => {
+                const checked = !!selectedQuestionIds[q.id]
+                return (
+                  <TouchableOpacity
+                    key={q.id}
+                    style={styles.checkboxRow}
+                    onPress={() => toggleQuestionSelected(q.id)}
+                    activeOpacity={0.8}
+                  >
+                    <View style={[styles.checkbox, checked && styles.checkboxChecked]}>
+                      {checked && <Text style={styles.checkboxMark}>✓</Text>}
+                    </View>
+                    <Text style={styles.checkboxLabel}>{q.question}</Text>
+                  </TouchableOpacity>
+                )
+              })}
+
+              <View style={[styles.inlineRow, { marginTop: 16 }]}>
+                <TouchableOpacity style={styles.smallButtonGhost} onPress={toggleAskAiMode}>
+                  <Text style={styles.smallButtonGhostText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.smallButton, selectedCount === 0 && styles.smallButtonDisabled]}
+                  onPress={askAiAboutSelectedQuestions}
+                  disabled={selectedCount === 0}
+                >
+                  <Text
+                    style={[
+                      styles.smallButtonText,
+                      selectedCount === 0 && styles.smallButtonTextDisabled,
+                    ]}
+                  >
+                    Ask AI{selectedCount > 0 ? ` (${selectedCount})` : ''}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          ) : (
+            <>
+              <Text style={styles.sectionHeading}>Questions ({questionsToShow.length})</Text>
+
+              {questionsToShow.length === 0 && (
+                <Text style={styles.emptyText}>No questions yet for this topic.</Text>
+              )}
+
+              {questionsToShow.map((q, index) => {
+                const state = questionStates[q.id] ?? EMPTY_QUESTION_STATE
+
+                return (
+                  <View key={q.id} style={styles.quizCard}>
+                    <Text style={styles.quizIndex}>Q{index + 1}</Text>
+                    <Text style={styles.questionText}>{q.question}</Text>
+
+                    {!state.revealed ? (
+                      <>
+                        <TextInput
+                          placeholder="Type your answer"
+                          placeholderTextColor="#6B6B6B"
+                          value={state.userAnswer}
+                          onChangeText={(text) => updateUserAnswer(q.id, text)}
+                          style={styles.formInput}
+                          multiline
+                        />
+                        <View style={styles.inlineRow}>
+                          <TouchableOpacity
+                            style={styles.smallButton}
+                            onPress={() => submitAnswer(q.id, q.answer)}
+                          >
+                            <Text style={styles.smallButtonText}>Submit</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={styles.smallButtonGhost}
+                            onPress={() => dontKnowAnswer(q.id)}
+                          >
+                            <Text style={styles.smallButtonGhostText}>I don't know</Text>
+                          </TouchableOpacity>
+                        </View>
+                      </>
+                    ) : (
+                      <>
+                        {state.submitted && state.userAnswer.trim() !== '' && (
+                          <Text style={styles.userAnswerText}>
+                            Your answer: {state.userAnswer}
+                          </Text>
+                        )}
+                        <Text style={styles.answerText}>{q.answer}</Text>
+
+                        {state.status === 'unanswered' ? (
+                          <View style={styles.inlineRow}>
+                            <TouchableOpacity
+                              style={styles.gradeButtonCorrect}
+                              onPress={() => markAnswer(q.id, 'correct')}
+                            >
+                              <Text style={styles.gradeButtonText}>Got it right</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              style={styles.gradeButtonIncorrect}
+                              onPress={() => markAnswer(q.id, 'incorrect')}
+                            >
+                              <Text style={styles.gradeButtonText}>Got it wrong</Text>
+                            </TouchableOpacity>
+                          </View>
+                        ) : (
+                          <View>
+                            <Text
+                              style={
+                                state.status === 'correct'
+                                  ? styles.statusCorrect
+                                  : styles.statusIncorrect
+                              }
+                            >
+                              {state.status === 'correct' ? 'You got it right' : 'You got it wrong'}
+                            </Text>
+                            <TouchableOpacity
+                              style={styles.aiHintRow}
+                              onPress={() => askAiAboutQuestion(q.question)}
+                              activeOpacity={0.8}
+                            >
+                              <Text style={styles.aiHintIcon}>🤖</Text>
+                              <Text style={styles.aiHintText}>
+                                {state.status === 'correct'
+                                  ? 'Ask AI to go deeper'
+                                  : 'Click to know more'}
+                              </Text>
+                            </TouchableOpacity>
+                          </View>
+                        )}
+                      </>
+                    )}
+                  </View>
+                )
+              })}
+            </>
+          )}
+        </ScrollView>
+      </KeyboardAvoidingView>
+    )
+  }
+
+  // ---------- Field detail view (topic list) ----------
 
   if (selectedField) {
     return (
       <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-        <TouchableOpacity onPress={() => setSelectedFieldId(null)} style={styles.backRow}>
+        <TouchableOpacity
+          onPress={() => {
+            setSelectedFieldId(null)
+            setSelectedTopicId(null)
+          }}
+          style={styles.backRow}
+        >
           <Text style={styles.backArrow}>‹</Text>
           <Text style={styles.backLabel}>All fields</Text>
         </TouchableOpacity>
@@ -332,128 +530,34 @@ function tasks() {
           {selectedField.topics.length} topic{selectedField.topics.length === 1 ? '' : 's'}
         </Text>
 
-        {selectedField.topics.map((topic) => {
-          const isExpanded = expandedTopicId === topic.id
-          const isEditingDate = dateDraftTopicId === topic.id
-          const isAddingQuestion = questionDraftTopicId === topic.id
-
-          return (
-            <View key={topic.id} style={styles.card}>
-              <TouchableOpacity
-                style={styles.topicHeaderRow}
-                onPress={() => setExpandedTopicId(isExpanded ? null : topic.id)}
-                activeOpacity={0.8}
-              >
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.topicName}>{topic.topicName}</Text>
-                  {topic.completionDate ? (
-                    <Text style={styles.topicMeta}>
-                      Target · {formatDate(topic.completionDate)}
-                      {daysUntil(topic.completionDate) >= 0
-                        ? `  ·  ${daysUntil(topic.completionDate)}d left`
-                        : '  ·  overdue'}
-                    </Text>
-                  ) : (
-                    <Text style={styles.topicMetaMuted}>No target date set</Text>
-                  )}
-                </View>
-                <Text style={styles.chevron}>{isExpanded ? '⌄' : '›'}</Text>
-              </TouchableOpacity>
-
-              {isExpanded && (
-                <View style={styles.expandedArea}>
-                  {/* Completion date */}
-                  {isEditingDate ? (
-                    <View style={styles.inlineRow}>
-                      <TextInput
-                        placeholder="YYYY-MM-DD"
-                        placeholderTextColor="#6B6B6B"
-                        value={dateDraftValue}
-                        onChangeText={setDateDraftValue}
-                        style={styles.inlineInput}
-                        autoCapitalize="none"
-                      />
-                      <TouchableOpacity
-                        style={styles.smallButton}
-                        onPress={() => saveCompletionDate(topic.id)}
-                      >
-                        <Text style={styles.smallButtonText}>Save</Text>
-                      </TouchableOpacity>
-                    </View>
-                  ) : (
-                    <TouchableOpacity
-                      style={styles.secondaryAction}
-                      onPress={() => {
-                        setDateDraftTopicId(topic.id)
-                        setDateDraftValue(topic.completionDate ?? '')
-                      }}
-                    >
-                      <Text style={styles.secondaryActionText}>
-                        {topic.completionDate ? 'Change target date' : '+ Set target date'}
-                      </Text>
-                    </TouchableOpacity>
-                  )}
-
-                  {/* Questions */}
-                  <Text style={styles.questionsLabel}>
-                    Questions ({topic.questions.length})
+        {selectedField.topics.map((topic) => (
+          <TouchableOpacity
+            key={topic.id}
+            style={styles.card}
+            onPress={() => setSelectedTopicId(topic.id)}
+            activeOpacity={0.8}
+          >
+            <View style={styles.topicHeaderRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.topicName}>{topic.topicName}</Text>
+                {topic.completionDate ? (
+                  <Text style={styles.topicMeta}>
+                    Target · {formatDate(topic.completionDate)}
+                    {daysUntil(topic.completionDate) >= 0
+                      ? `  ·  ${daysUntil(topic.completionDate)}d left`
+                      : '  ·  overdue'}
                   </Text>
-
-                  {topic.questions.map((q) => (
-                    <View key={q.id} style={styles.questionRow}>
-                      <Text style={styles.questionText}>{q.question}</Text>
-                      <Text style={styles.answerText}>{q.answer}</Text>
-                    </View>
-                  ))}
-
-                  {isAddingQuestion ? (
-                    <View style={styles.questionForm}>
-                      <TextInput
-                        placeholder="Question"
-                        placeholderTextColor="#6B6B6B"
-                        value={questionDraftText}
-                        onChangeText={setQuestionDraftText}
-                        style={styles.formInput}
-                      />
-                      <TextInput
-                        placeholder="Answer"
-                        placeholderTextColor="#6B6B6B"
-                        value={answerDraftText}
-                        onChangeText={setAnswerDraftText}
-                        style={styles.formInput}
-                      />
-                      <View style={styles.inlineRow}>
-                        <TouchableOpacity
-                          style={styles.smallButton}
-                          onPress={() => addQuestion(topic.id)}
-                        >
-                          <Text style={styles.smallButtonText}>Add</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={styles.smallButtonGhost}
-                          onPress={() => {
-                            setQuestionDraftTopicId(null)
-                            setQuestionDraftText('')
-                            setAnswerDraftText('')
-                          }}
-                        >
-                          <Text style={styles.smallButtonGhostText}>Cancel</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  ) : (
-                    <TouchableOpacity
-                      style={styles.secondaryAction}
-                      onPress={() => setQuestionDraftTopicId(topic.id)}
-                    >
-                      <Text style={styles.secondaryActionText}>+ Add a question</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              )}
+                ) : (
+                  <Text style={styles.topicMetaMuted}>No target date set</Text>
+                )}
+                <Text style={styles.fieldMeta}>
+                  {topic.questions.length} question{topic.questions.length === 1 ? '' : 's'}
+                </Text>
+              </View>
+              <Text style={styles.chevron}>›</Text>
             </View>
-          )
-        })}
+          </TouchableOpacity>
+        ))}
       </ScrollView>
     )
   }
@@ -496,7 +600,7 @@ function tasks() {
         })}
 
         {filteredFields.length === 0 && (
-          <Text style={styles.emptyText}>No fields match “{searchInput}”.</Text>
+          <Text style={styles.emptyText}>No fields match "{searchInput}".</Text>
         )}
       </View>
 
@@ -510,7 +614,10 @@ function tasks() {
           <TouchableOpacity
             key={task.id}
             style={styles.taskCard}
-            onPress={() => setSelectedFieldId(task.fieldId)}
+            onPress={() => {
+              setSelectedFieldId(task.fieldId)
+              setSelectedTopicId(task.id)
+            }}
             activeOpacity={0.8}
           >
             <View style={styles.taskDot} />
@@ -536,6 +643,10 @@ const CARD_BORDER = '#262626'
 const TEXT_PRIMARY = '#FFFFFF'
 const TEXT_SECONDARY = '#9A9A9A'
 const TEXT_MUTED = '#6B6B6B'
+const GREEN = '#35C46A'
+const RED = '#E05656'
+const DISABLED_BG = '#2A2A2A'
+const DISABLED_TEXT = '#6E6E6E'
 
 const styles = StyleSheet.create({
   screen: {
@@ -620,7 +731,7 @@ const styles = StyleSheet.create({
     color: TEXT_PRIMARY,
     fontSize: 20,
     fontWeight: '700',
-    marginTop: 32,
+    marginTop: 24,
     marginBottom: 12,
   },
   taskList: {
@@ -680,14 +791,9 @@ const styles = StyleSheet.create({
     color: TEXT_MUTED,
     fontSize: 13,
   },
-  expandedArea: {
-    marginTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: CARD_BORDER,
-    paddingTop: 16,
-  },
   secondaryAction: {
     paddingVertical: 6,
+    marginTop: 8,
   },
   secondaryActionText: {
     color: ACCENT,
@@ -716,10 +822,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 9,
   },
+  smallButtonDisabled: {
+    backgroundColor: DISABLED_BG,
+  },
   smallButtonText: {
     color: '#1A1200',
     fontSize: 14,
     fontWeight: '700',
+  },
+  smallButtonTextDisabled: {
+    color: DISABLED_TEXT,
   },
   smallButtonGhost: {
     borderRadius: 10,
@@ -730,35 +842,88 @@ const styles = StyleSheet.create({
   },
   smallButtonGhostText: {
     color: TEXT_SECONDARY,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
   },
   questionsLabel: {
     color: TEXT_SECONDARY,
     fontSize: 13,
     fontWeight: '600',
-    marginTop: 16,
     marginBottom: 8,
   },
-  questionRow: {
-    backgroundColor: '#1A1A1A',
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 8,
+  askAiCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: CARD_BG,
+    borderWidth: 1,
+    borderColor: ACCENT,
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginBottom: 4,
+  },
+  askAiText: {
+    flex: 1,
+    color: ACCENT,
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  checkboxRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: CARD_BG,
+    borderWidth: 1,
+    borderColor: CARD_BORDER,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    marginBottom: 10,
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: CARD_BORDER,
+    marginRight: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxChecked: {
+    backgroundColor: ACCENT,
+    borderColor: ACCENT,
+  },
+  checkboxMark: {
+    color: '#1A1200',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  checkboxLabel: {
+    flex: 1,
+    color: TEXT_PRIMARY,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  quizCard: {
+    backgroundColor: CARD_BG,
+    borderWidth: 1,
+    borderColor: CARD_BORDER,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+  },
+  quizIndex: {
+    color: TEXT_MUTED,
+    fontSize: 12,
+    fontWeight: '700',
+    marginBottom: 6,
+    letterSpacing: 0.5,
   },
   questionText: {
     color: TEXT_PRIMARY,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
-    marginBottom: 4,
-  },
-  answerText: {
-    color: TEXT_SECONDARY,
-    fontSize: 13,
-  },
-  questionForm: {
-    marginTop: 4,
-    gap: 10,
+    marginBottom: 10,
   },
   formInput: {
     backgroundColor: '#1A1A1A',
@@ -769,6 +934,65 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     color: TEXT_PRIMARY,
     fontSize: 14,
+    marginBottom: 10,
+    minHeight: 44,
+    textAlignVertical: 'top',
+  },
+  userAnswerText: {
+    color: TEXT_SECONDARY,
+    fontSize: 13,
+    fontStyle: 'italic',
+    marginTop: 8,
+  },
+  answerText: {
+    color: TEXT_SECONDARY,
+    fontSize: 14,
+    marginTop: 6,
+    marginBottom: 12,
+    lineHeight: 20,
+  },
+  gradeButtonCorrect: {
+    backgroundColor: GREEN,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+  },
+  gradeButtonIncorrect: {
+    backgroundColor: RED,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+  },
+  gradeButtonText: {
+    color: '#0A0A0A',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  statusCorrect: {
+    color: GREEN,
+    fontSize: 13,
+    fontWeight: '600',
+    marginTop: 4,
+  },
+  statusIncorrect: {
+    color: RED,
+    fontSize: 13,
+    fontWeight: '600',
+    marginTop: 4,
+  },
+  aiHintRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  aiHintIcon: {
+    fontSize: 16,
+    marginRight: 6,
+  },
+  aiHintText: {
+    color: ACCENT,
+    fontSize: 13,
+    fontWeight: '600',
   },
 })
 

@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: "standalone",
+  // output: "standalone",
   serverExternalPackages: ["@huggingface/transformers"],
   transpilePackages: [
     "react-native-web",

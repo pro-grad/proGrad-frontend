@@ -1,5 +1,5 @@
 /** @type {import('next').NextConfig} */
-onst nextConfig = {
+const nextConfig = {
   output: "export",
   eslint: {
     ignoreDuringBuilds: true,

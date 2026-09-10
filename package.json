@@ -15,8 +15,8 @@
     "@react-navigation/native-stack": "^7.18.10",
     "lottie-react": "^3.1.2",
     "next": "^15.2.4",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
     "react-native-safe-area-context": "^5.9.1",
     "react-native-screens": "^4.27.0",
     "react-native-web": "^0.21.2"
@@ -27,5 +27,9 @@
     "eslint-config-next": "15.1.6",
     "postcss": "^8",
     "tailwindcss": "^3.4.1"
+  },
+  "overrides": {
+    "react": "19.0.0",
+    "react-dom": "19.0.0"
   }
 }

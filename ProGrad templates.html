@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Learnslot — App Templates</title>
+<style>
+  :root{
+    --bg-dark:#111827;
+    --surface:#1A2333;
+    --surface-2:#212C40;
+    --border:#2A3550;
+    --indigo:#6366F1;
+    --violet:#8B5CF6;
+    --mint:#2DD4BF;
+    --bg-light:#F9FAFB;
+    --text-hi:#F9FAFB;
+    --text-mid:#A9B3C7;
+    --text-low:#6B7690;
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, Helvetica, Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:var(--font);
+    background:#0B0F19;
+    color:var(--text-hi);
+    padding:40px 20px 80px;
+  }
+  .intro{
+    max-width:920px;
+    margin:0 auto 32px;
+  }
+  .intro h1{
+    font-size:22px;
+    font-weight:650;
+    margin:0 0 6px;
+    letter-spacing:-0.01em;
+  }
+  .intro p{
+    color:var(--text-mid);
+    font-size:14px;
+    line-height:1.6;
+    margin:0 0 14px;
+    max-width:640px;
+  }
+  .palette{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+  .swatch{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    background:var(--surface);
+    border:1px solid var(--border);
+    padding:6px 12px 6px 6px;
+    border-radius:20px;
+    font-size:12px;
+    color:var(--text-mid);
+  }
+  .dot{width:16px;height:16px;border-radius:50%;flex:none;}
+
+  .board{
+    max-width:1200px;
+    margin:0 auto;
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(300px, 1fr));
+    gap:28px;
+  }
+
+  .frame-wrap{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:12px;
+  }
+  .frame-label{
+    font-size:13px;
+    font-weight:600;
+    color:var(--text-mid);
+    letter-spacing:.02em;
+  }
+
+  /* ---- Phone frame ---- */
+  .phone{
+    width:300px;
+    height:640px;
+    background:var(--bg-dark);
+    border-radius:34px;
+    border:6px solid #05070C;
+    box-shadow:0 20px 60px rgba(0,0,0,.5);
+    overflow:hidden;
+    position:relative;
+    display:flex;
+    flex-direction:column;
+  }
+  .statusbar{
+    height:26px;
+    flex:none;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:0 20px;
+    font-size:11px;
+    color:var(--text-mid);
+  }
+  .screen{
+    flex:1;
+    overflow-y:auto;
+    padding:4px 16px 12px;
+    scrollbar-width:none;
+  }
+  .screen::-webkit-scrollbar{display:none;}
+
+  .navbar{
+    flex:none;
+    display:flex;
+    justify-content:space-around;
+    align-items:center;
+    height:60px;
+    background:var(--surface);
+    border-top:1px solid var(--border);
+  }
+  .navitem{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:3px;
+    font-size:10px;
+    color:var(--text-low);
+  }
+  .navitem.active{color:var(--indigo);}
+  .navicon{
+    width:20px;height:20px;
+    display:flex;align-items:center;justify-content:center;
+  }
+
+  /* ---- shared bits ---- */
+  h2.section-title{
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:.06em;
+    color:var(--text-low);
+    margin:20px 0 10px;
+  }
+  .greet-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:14px 0 4px;
+  }
+  .greet-row .hi{font-size:15px;font-weight:650;}
+  .greet-row .sub{font-size:11px;color:var(--text-mid);margin-top:2px;}
+  .bell{
+    width:34px;height:34px;border-radius:50%;
+    background:var(--surface);
+    display:flex;align-items:center;justify-content:center;
+    font-size:15px;
+    border:1px solid var(--border);
+  }
+  .searchbar{
+    margin-top:14px;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:11px 14px;
+    font-size:12px;
+    color:var(--text-mid);
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+
+  .card{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:16px;
+    padding:14px;
+    margin-bottom:10px;
+  }
+  .progress-card .top{
+    display:flex;justify-content:space-between;align-items:center;
+    font-size:12px;font-weight:650;
+  }
+  .progress-track{
+    height:6px;border-radius:6px;background:var(--bg-dark);
+    margin:10px 0 8px;overflow:hidden;
+  }
+  .progress-fill{
+    height:100%;border-radius:6px;
+    background:linear-gradient(90deg,var(--indigo),var(--violet));
+  }
+  .progress-note{font-size:11px;color:var(--text-mid);line-height:1.5;}
+  .btn{
+    display:inline-block;
+    background:var(--indigo);
+    color:#fff;
+    font-size:11px;
+    font-weight:650;
+    padding:8px 14px;
+    border-radius:10px;
+    margin-top:8px;
+    border:none;
+  }
+  .btn.ghost{
+    background:transparent;
+    border:1px solid var(--border);
+    color:var(--text-hi);
+  }
+  .btn.mint{background:var(--mint); color:#06231F;}
+
+  .reco-card{
+    display:flex;
+    gap:10px;
+    align-items:flex-start;
+  }
+  .reco-icon{
+    width:34px;height:34px;border-radius:10px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:15px;flex:none;
+  }
+  .icon-violet{background:rgba(139,92,246,.18); color:var(--violet);}
+  .icon-indigo{background:rgba(99,102,241,.18); color:var(--indigo);}
+  .icon-mint{background:rgba(45,212,191,.18); color:var(--mint);}
+  .reco-title{font-size:12.5px;font-weight:650;}
+  .reco-sub{font-size:11px;color:var(--text-mid);margin-top:2px;}
+  .match-pill{
+    margin-top:6px;
+    display:inline-block;
+    font-size:10px;font-weight:700;
+    color:var(--mint);
+    background:rgba(45,212,191,.12);
+    padding:2px 8px;border-radius:20px;
+  }
+
+  .stat-row{display:flex;gap:10px;}
+  .stat{
+    flex:1;background:var(--surface);border:1px solid var(--border);
+    border-radius:14px;padding:12px;text-align:center;
+  }
+  .stat .num{font-size:17px;font-weight:700;}
+  .stat .lbl{font-size:10px;color:var(--text-mid);margin-top:2px;}
+
+  /* tabs (used in Explore) */
+  .tabbar{
+    display:flex;gap:6px;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:4px;
+    margin-top:12px;
+  }
+  .tab{
+    flex:1;text-align:center;
+    font-size:11px;font-weight:650;
+    color:var(--text-mid);
+    padding:8px 0;border-radius:9px;
+  }
+  .tab.active{
+    background:var(--indigo);
+    color:#fff;
+  }
+
+  .person-row{
+    display:flex;align-items:center;gap:10px;
+    padding:10px 0;border-bottom:1px solid var(--border);
+  }
+  .avatar{
+    width:36px;height:36px;border-radius:50%;
+    background:linear-gradient(135deg,var(--indigo),var(--violet));
+    flex:none;
+  }
+  .p-name{font-size:12px;font-weight:650;}
+  .p-sub{font-size:10.5px;color:var(--text-mid);margin-top:1px;}
+  .connect-btn{
+    margin-left:auto;
+    font-size:10px;font-weight:700;
+    color:var(--indigo);
+    border:1px solid var(--indigo);
+    padding:5px 10px;border-radius:20px;
+  }
+
+  .job-card{margin-bottom:10px;}
+  .job-top{display:flex;justify-content:space-between;align-items:flex-start;}
+  .job-tags{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
+  .tag{
+    font-size:9.5px;color:var(--text-mid);
+    background:var(--bg-dark);
+    border:1px solid var(--border);
+    padding:3px 8px;border-radius:20px;
+  }
+
+  .event-date{
+    width:42px;flex:none;text-align:center;
+    background:var(--bg-dark);border:1px solid var(--border);
+    border-radius:10px;padding:6px 0;
+  }
+  .event-date .d{font-size:14px;font-weight:700;color:var(--mint);}
+  .event-date .m{font-size:8.5px;color:var(--text-mid);}
+
+  /* tasks screen */
+  .task-group-title{
+    font-size:11px;font-weight:700;color:var(--text-mid);
+    margin:16px 0 8px;
+    display:flex;align-items:center;gap:6px;
+  }
+  .dotstatus{width:7px;height:7px;border-radius:50%;}
+  .task-row{
+    display:flex;align-items:center;gap:10px;
+    background:var(--surface);border:1px solid var(--border);
+    border-radius:12px;padding:10px 12px;margin-bottom:8px;
+  }
+  .checkbox{
+    width:18px;height:18px;border-radius:6px;
+    border:1.5px solid var(--text-low);
+    flex:none;
+    display:flex;align-items:center;justify-content:center;
+    font-size:11px;
+  }
+  .checkbox.done{
+    background:var(--mint);border-color:var(--mint);color:#06231F;
+  }
+  .task-title{font-size:12px;font-weight:600;}
+  .task-title.done{color:var(--text-low);text-decoration:line-through;}
+  .task-meta{font-size:10px;color:var(--text-mid);margin-top:2px;}
+
+  /* profile */
+  .profile-head{
+    display:flex;flex-direction:column;align-items:center;
+    padding:18px 0 10px;text-align:center;
+  }
+  .avatar-lg{
+    width:76px;height:76px;border-radius:50%;
+    background:linear-gradient(135deg,var(--indigo),var(--violet),var(--mint));
+    border:3px solid var(--surface);
+    margin-bottom:10px;
+  }
+  .profile-name{font-size:15px;font-weight:700;}
+  .profile-role{font-size:11.5px;color:var(--text-mid);margin-top:2px;}
+  .chip-row{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-top:10px;}
+  .chip{
+    font-size:10px;color:var(--text-hi);
+    background:var(--surface-2);border:1px solid var(--border);
+    padding:5px 10px;border-radius:20px;
+  }
+  .link-row{
+    display:flex;align-items:center;gap:10px;
+    padding:11px 4px;border-bottom:1px solid var(--border);
+    font-size:12px;
+  }
+  .link-row .ic{width:20px;text-align:center;}
+  .link-row .arrow{margin-left:auto;color:var(--text-low);}
+</style>
+</head>
+<body>
+
+  <div class="intro">
+    <h1>ProGrad Mobile template set</h1>
+       <div class="palette">
+      <div class="swatch"><span class="dot" style="background:#111827;border:1px solid #333"></span>#111827 — Dark background</div>
+      <div class="swatch"><span class="dot" style="background:#6366F1"></span>#6366F1 — Indigo</div>
+      <div class="swatch"><span class="dot" style="background:#8B5CF6"></span>#8B5CF6 — Violet</div>
+      <div class="swatch"><span class="dot" style="background:#2DD4BF"></span>#2DD4BF — Mint</div>
+      <div class="swatch"><span class="dot" style="background:#F9FAFB;border:1px solid #333"></span>#F9FAFB — Background</div>
+    </div>
+  </div>
+
+  <div class="board">
+
+    <!-- ============ HOME ============ -->
+    <div class="frame-wrap">
+      <div class="frame-label"> Home</div>
+      <div class="phone">
+        <div class="statusbar"><span>9:41</span><span>●●●●  📶  🔋</span></div>
+        <div class="screen">
+          <div class="greet-row">
+            <div>
+              <div class="hi">👋 Good morning, Amara</div>
+              <div class="sub">Let's find your next step</div>
+            </div>
+            <div class="bell">🔔</div>
+          </div>
+          <div class="searchbar">🔍 Search people, jobs, events…</div>
+
+          <h2 class="section-title">COMPLETE YOUR PROFILE</h2>
+          <div class="card progress-card">
+            <div class="top"><span>Profile strength</span><span>82%</span></div>
+            <div class="progress-track"><div class="progress-fill" style="width:82%"></div></div>
+            <div class="progress-note">Add your GitHub to become more visible to recruiters.</div>
+            <button class="btn">Complete profile</button>
+          </div>
+
+          <h2 class="section-title">RECOMMENDED FOR YOU</h2>
+          <div class="card reco-card">
+            <div class="reco-icon icon-violet">💼</div>
+            <div>
+              <div class="reco-title">Graduate Software Developer</div>
+              <div class="reco-sub">Coreflow · Cape Town · Remote-friendly</div>
+              <span class="match-pill">94% match</span>
+            </div>
+          </div>
+          <div class="card reco-card">
+            <div class="reco-icon icon-indigo">🎓</div>
+            <div>
+              <div class="reco-title">3 alumni from your programme</div>
+              <div class="reco-sub">Now working in software engineering</div>
+            </div>
+          </div>
+          <div class="card reco-card">
+            <div class="reco-icon icon-mint">📅</div>
+            <div>
+              <div class="reco-title">Tech Career Workshop</div>
+              <div class="reco-sub">Starts in 2 days · Virtual</div>
+            </div>
+          </div>
+
+          <h2 class="section-title">YOUR NETWORK</h2>
+          <div class="stat-row">
+            <div class="stat"><div class="num">128</div><div class="lbl">Connections</div></div>
+            <div class="stat"><div class="num" style="color:var(--mint)">+12</div><div class="lbl">This month</div></div>
+          </div>
+        </div>
+        <div class="navbar">
+          <div class="navitem active"><div class="navicon">🏠</div>Home</div>
+          <div class="navitem"><div class="navicon">🧭</div>Explore</div>
+          <div class="navitem"><div class="navicon">✅</div>Tasks</div>
+          <div class="navitem"><div class="navicon">👤</div>Profile</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ EXPLORE ============ -->
+    <div class="frame-wrap">
+      <div class="frame-label">Explore: Opportunities tab</div>
+      <div class="phone">
+        <div class="statusbar"><span>9:41</span><span>●●●●  📶  🔋</span></div>
+        <div class="screen">
+          <div class="greet-row" style="padding-top:14px;">
+            <div><div class="hi">Explore</div><div class="sub">Network, jobs and events in one place</div></div>
+          </div>
+          <div class="tabbar">
+            <div class="tab">Network</div>
+            <div class="tab active">Opportunities</div>
+            <div class="tab">Events</div>
+          </div>
+
+          <h2 class="section-title">TOP MATCHES</h2>
+          <div class="card job-card">
+            <div class="job-top">
+              <div>
+                <div class="reco-title">Graduate Software Developer</div>
+                <div class="reco-sub">Coreflow · Cape Town</div>
+              </div>
+              <span class="match-pill">94%</span>
+            </div>
+            <div class="job-tags"><span class="tag">Remote-friendly</span><span class="tag">Entry-level</span></div>
+          </div>
+          <div class="card job-card">
+            <div class="job-top">
+              <div>
+                <div class="reco-title">Junior Data Analyst</div>
+                <div class="reco-sub">Nomvula Labs · Johannesburg</div>
+              </div>
+              <span class="match-pill">88%</span>
+            </div>
+            <div class="job-tags"><span class="tag">Hybrid</span><span class="tag">Graduate programme</span></div>
+          </div>
+          <div class="card job-card">
+            <div class="job-top">
+              <div>
+                <div class="reco-title">Product Design Intern</div>
+                <div class="reco-sub">Studio Alta · Remote</div>
+              </div>
+              <span class="match-pill">81%</span>
+            </div>
+            <div class="job-tags"><span class="tag">Internship</span><span class="tag">6 months</span></div>
+          </div>
+          <button class="btn ghost" style="width:100%;text-align:center;">See all opportunities</button>
+        </div>
+        <div class="navbar">
+          <div class="navitem"><div class="navicon">🏠</div>Home</div>
+          <div class="navitem active"><div class="navicon">🧭</div>Explore</div>
+          <div class="navitem"><div class="navicon">✅</div>Tasks</div>
+          <div class="navitem"><div class="navicon">👤</div>Profile</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ EXPLORE (Network tab reference) ============ -->
+    <div class="frame-wrap">
+      <div class="frame-label">Explore: Network tab</div>
+      <div class="phone">
+        <div class="statusbar"><span>9:41</span><span>●●●●  📶  🔋</span></div>
+        <div class="screen">
+          <div class="greet-row" style="padding-top:14px;">
+            <div><div class="hi">Explore</div><div class="sub">Network, jobs and events in one place</div></div>
+          </div>
+          <div class="tabbar">
+            <div class="tab active">Network</div>
+            <div class="tab">Opportunities</div>
+            <div class="tab">Events</div>
+          </div>
+
+          <h2 class="section-title">SUGGESTED ALUMNI</h2>
+          <div class="person-row">
+            <div class="avatar"></div>
+            <div><div class="p-name">Bronn Chavangu</div><div class="p-sub">Software Engineer · Coreflow</div></div>
+            <div class="connect-btn">Connect</div>
+          </div>
+          <div class="person-row">
+            <div class="avatar"></div>
+            <div><div class="p-name">Brad Dube</div><div class="p-sub">Data Analyst · Nomvula Labs</div></div>
+            <div class="connect-btn">Connect</div>
+          </div>
+          <div class="person-row" style="border-bottom:none;">
+            <div class="avatar"></div>
+            <div><div class="p-name">Zedd Mokoena</div><div class="p-sub">Product Designer · Studio Alta</div></div>
+            <div class="connect-btn">Connect</div>
+          </div>
+
+          <h2 class="section-title">YOUR NETWORK</h2>
+          <div class="stat-row">
+            <div class="stat"><div class="num">128</div><div class="lbl">Connections</div></div>
+            <div class="stat"><div class="num" style="color:var(--mint)">+12</div><div class="lbl">This month</div></div>
+          </div>
+        </div>
+        <div class="navbar">
+          <div class="navitem"><div class="navicon">🏠</div>Home</div>
+          <div class="navitem active"><div class="navicon">🧭</div>Explore</div>
+          <div class="navitem"><div class="navicon">✅</div>Tasks</div>
+          <div class="navitem"><div class="navicon">👤</div>Profile</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ EXPLORE (Events tab reference) ============ -->
+    <div class="frame-wrap">
+      <div class="frame-label">Explore:Events tab</div>
+      <div class="phone">
+        <div class="statusbar"><span>9:41</span><span>●●●●  📶  🔋</span></div>
+        <div class="screen">
+          <div class="greet-row" style="padding-top:14px;">
+            <div><div class="hi">Explore</div><div class="sub">Network, jobs and events in one place</div></div>
+          </div>
+          <div class="tabbar">
+            <div class="tab">Network</div>
+            <div class="tab">Opportunities</div>
+            <div class="tab active">Events</div>
+          </div>
+
+          <h2 class="section-title">UPCOMING</h2>
+          <div class="card" style="display:flex;gap:10px;">
+            <div class="event-date"><div class="d">14</div><div class="m">SEP</div></div>
+            <div><div class="reco-title">Tech Career Workshop</div><div class="reco-sub">Virtual · 2 days away</div></div>
+          </div>
+          <div class="card" style="display:flex;gap:10px;">
+            <div class="event-date"><div class="d">21</div><div class="m">SEP</div></div>
+            <div><div class="reco-title">Grad CV Clinic</div><div class="reco-sub">Johannesburg · In person</div></div>
+          </div>
+          <div class="card" style="display:flex;gap:10px;">
+            <div class="event-date"><div class="d">03</div><div class="m">OCT</div></div>
+            <div><div class="reco-title">Alumni Meetup: Tech</div><div class="reco-sub">Virtual · RSVP open</div></div>
+          </div>
+        </div>
+        <div class="navbar">
+          <div class="navitem"><div class="navicon">🏠</div>Home</div>
+          <div class="navitem active"><div class="navicon">🧭</div>Explore</div>
+          <div class="navitem"><div class="navicon">✅</div>Tasks</div>
+          <div class="navitem"><div class="navicon">👤</div>Profile</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ TASKS — TO-DO'S TAB ============ -->
+    <div class="frame-wrap">
+      <div class="frame-label">Tasks:To-do's tab</div>
+      <div class="phone">
+        <div class="statusbar"><span>9:41</span><span>●●●●  📶  🔋</span></div>
+        <div class="screen">
+          <div class="greet-row" style="padding-top:14px;">
+            <div><div class="hi">Tasks</div><div class="sub">Your career prep checklist</div></div>
+          </div>
+          <div class="tabbar">
+            <div class="tab active">To-do's</div>
+            <div class="tab">Assessments</div>
+          </div>
+
+          <div class="task-group-title"><span class="dotstatus" style="background:var(--indigo)"></span>TO DO</div>
+          <div class="task-row">
+            <div class="checkbox"></div>
+            <div><div class="task-title">Add GitHub to profile</div><div class="task-meta">Boosts recruiter visibility</div></div>
+          </div>
+          <div class="task-row">
+            <div class="checkbox"></div>
+            <div><div class="task-title">Apply — Graduate Software Developer</div><div class="task-meta">Coreflow · Closes in 5 days</div></div>
+          </div>
+
+          <div class="task-group-title"><span class="dotstatus" style="background:var(--violet)"></span>IN PROGRESS</div>
+          <div class="task-row">
+            <div class="checkbox">···</div>
+            <div><div class="task-title">Update resume with capstone project</div><div class="task-meta">Draft saved</div></div>
+          </div>
+
+          <div class="task-group-title"><span class="dotstatus" style="background:var(--mint)"></span>DONE</div>
+          <div class="task-row">
+            <div class="checkbox done">✓</div>
+            <div><div class="task-title done">Registered for Tech Career Workshop</div><div class="task-meta">Sep 14</div></div>
+          </div>
+          <div class="task-row">
+            <div class="checkbox done">✓</div>
+            <div><div class="task-title done">Connected with 3 alumni</div><div class="task-meta">This week</div></div>
+          </div>
+
+          <button class="btn mint" style="width:100%;text-align:center;margin-top:6px;">+ Add task</button>
+        </div>
+        <div class="navbar">
+          <div class="navitem"><div class="navicon">🏠</div>Home</div>
+          <div class="navitem"><div class="navicon">🧭</div>Explore</div>
+          <div class="navitem active"><div class="navicon">✅</div>Tasks</div>
+          <div class="navitem"><div class="navicon">👤</div>Profile</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ TASKS — ASSESSMENTS TAB ============ -->
+    <div class="frame-wrap">
+      <div class="frame-label">Tasks: Assessments tab</div>
+      <div class="phone">
+        <div class="statusbar"><span>9:41</span><span>●●●●  📶  🔋</span></div>
+        <div class="screen">
+          <div class="greet-row" style="padding-top:14px;">
+            <div><div class="hi">Tasks</div><div class="sub">Your career prep checklist</div></div>
+          </div>
+          <div class="tabbar">
+            <div class="tab">To-do's</div>
+            <div class="tab active">Assessments</div>
+          </div>
+
+          <div class="task-group-title"><span class="dotstatus" style="background:var(--indigo)"></span>PENDING</div>
+          <div class="card job-card">
+            <div class="job-top">
+              <div>
+                <div class="reco-title">Python Fundamentals Quiz</div>
+                <div class="reco-sub">20 questions · ~15 min</div>
+              </div>
+            </div>
+            <div class="job-tags"><span class="tag">Required</span><span class="tag">Due Sep 18</span></div>
+          </div>
+          <div class="card job-card">
+            <div class="job-top">
+              <div>
+                <div class="reco-title">SQL Skills Check</div>
+                <div class="reco-sub">15 questions · ~10 min</div>
+              </div>
+            </div>
+            <div class="job-tags"><span class="tag">Optional</span><span class="tag">Due Sep 25</span></div>
+          </div>
+
+          <div class="task-group-title"><span class="dotstatus" style="background:var(--mint)"></span>COMPLETED</div>
+          <div class="card reco-card">
+            <div class="reco-icon icon-mint">✓</div>
+            <div>
+              <div class="reco-title">Communication Skills Assessment</div>
+              <div class="reco-sub">Completed Sep 3</div>
+              <span class="match-pill">Score: 91%</span>
+            </div>
+          </div>
+          <div class="card reco-card">
+            <div class="reco-icon icon-mint">✓</div>
+            <div>
+              <div class="reco-title">Problem Solving Assessment</div>
+              <div class="reco-sub">Completed Aug 27</div>
+              <span class="match-pill">Score: 84%</span>
+            </div>
+          </div>
+        </div>
+        <div class="navbar">
+          <div class="navitem"><div class="navicon">🏠</div>Home</div>
+          <div class="navitem"><div class="navicon">🧭</div>Explore</div>
+          <div class="navitem active"><div class="navicon">✅</div>Tasks</div>
+          <div class="navitem"><div class="navicon">👤</div>Profile</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ PROFILE ============ -->
+    <div class="frame-wrap">
+      <div class="frame-label">Profile</div>
+      <div class="phone">
+        <div class="statusbar"><span>9:41</span><span>●●●●  📶  🔋</span></div>
+        <div class="screen">
+          <div class="profile-head">
+            <div class="avatar-lg"></div>
+            <div class="profile-name">Learnslot Nyoni</div>
+            <div class="profile-role">BSc Information Technology · Sophomore</div>
+            <div class="chip-row">
+              <span class="chip">Python</span>
+              <span class="chip">React</span>
+              <span class="chip">SQL</span>
+            </div>
+            <button class="btn" style="margin-top:14px;">Edit profile</button>
+          </div>
+
+          <h2 class="section-title">PROFILE STRENGTH</h2>
+          <div class="card progress-card">
+            <div class="top"><span>82% complete</span><span style="color:var(--mint)">Almost there</span></div>
+            <div class="progress-track"><div class="progress-fill" style="width:82%"></div></div>
+            <div class="progress-note">Add your GitHub to reach 100%.</div>
+          </div>
+
+          <h2 class="section-title">ACCOUNT</h2>
+          <div class="link-row"><span class="ic">🐙</span>Connect GitHub<span class="arrow">›</span></div>
+          <div class="link-row"><span class="ic">📄</span>Resume & documents<span class="arrow">›</span></div>
+          <div class="link-row"><span class="ic">🔔</span>Notifications<span class="arrow">›</span></div>
+          <div class="link-row"><span class="ic">🔒</span>Privacy & security<span class="arrow">›</span></div>
+          <div class="link-row" style="border-bottom:none;"><span class="ic">🚪</span>Log out<span class="arrow">›</span></div>
+        </div>
+        <div class="navbar">
+          <div class="navitem"><div class="navicon">🏠</div>Home</div>
+          <div class="navitem"><div class="navicon">🧭</div>Explore</div>
+          <div class="navitem"><div class="navicon">✅</div>Tasks</div>
+          <div class="navitem active"><div class="navicon">👤</div>Profile</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>

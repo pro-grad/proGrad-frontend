@@ -1,3 +1,7 @@
+// app/(tabs)/tasks.tsx
+
+import { useRouter } from 'expo-router'
+import { ChevronDown, ChevronRight, Settings } from 'lucide-react-native'
 import React, { useEffect, useState } from 'react'
 import {
   Alert,
@@ -10,8 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native'
-import { useRouter } from 'expo-router'
-import { initialFieldsData, ProField, Topic } from '../../lib/data'
+import { initialFieldsData, initialStreaksData, ProField, Streak } from '../../lib/data'
 
 const initialFields: ProField[] = initialFieldsData
 
@@ -23,11 +26,18 @@ type QuestionState = {
   status: QuestionStatus
 }
 
+type QuestionLevel = 'beginner' | 'intermediate' | 'expert'
+const QUESTION_LEVELS: QuestionLevel[] = ['beginner', 'intermediate', 'expert']
+
 const EMPTY_QUESTION_STATE: QuestionState = {
   userAnswer: '',
   submitted: false,
   revealed: false,
   status: 'unanswered',
+}
+
+function streaksById(streaks: Streak[]): Record<string, Streak> {
+  return Object.fromEntries(streaks.map((s) => [s.topicId, s]))
 }
 
 // ---------- Helpers ----------
@@ -41,8 +51,11 @@ function daysUntil(date: string) {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   const target = new Date(`${date}T00:00:00`)
-  const diff = Math.round((target.getTime() - today.getTime()) / 86400000)
-  return diff
+  return Math.round((target.getTime() - today.getTime()) / 86400000)
+}
+
+function todayISO() {
+  return new Date().toISOString().slice(0, 10)
 }
 
 // Not wired up yet — there's no backend that can actually grade a free-text
@@ -61,31 +74,51 @@ function checkAnswerAgainstKey(userAnswer: string, correctAnswer: string): boole
 // ---------- Component ----------
 
 function tasks() {
-  const router = useRouter()
-
   const [fieldsData, setFieldsData] = useState<ProField[]>(initialFields)
   const [searchInput, setSearchInput] = useState('')
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null)
   const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null)
 
-  const [dateDraftTopicId, setDateDraftTopicId] = useState<string | null>(null)
-  const [dateDraftValue, setDateDraftValue] = useState('')
+  const [hideFields, setHideFields] = useState(false)
+  const [hideActiveTasks, setHideActiveTasks] = useState(false)
 
-  // How many of the topic's questions the person wants to be quizzed on.
-  // Dummy for now — once the backend exists, this count is what gets sent
-  // to it to generate/pull that many questions instead of just slicing
-  // the local array.
-  const [questionCountInput, setQuestionCountInput] = useState('')
+  // TODO: dummy user later connected to superbase
+  const user = {
+    userName: 'dave',
+    userId: 'dave-001',
+    email: 'testNumber@gmail.com',
+  }
+
+  const router = useRouter()
+
+  // Streaks live in their own map, keyed by topicId — mirrors the separate
+  // `streak` table (topicId/userId row, not a field on topic). A topic can
+  // have zero or one active streak.
+  const [streaks, setStreaks] = useState<Record<string, Streak>>(() =>
+    streaksById(initialStreaksData)
+  )
+
+  // Draft values for the streak setup/edit form on the topic screen.
+  const [draftCompletionDate, setDraftCompletionDate] = useState('')
+  const [draftDailyGoalInput, setDraftDailyGoalInput] = useState('')
+  // Whether the streak form is open. Starts open automatically when a
+  // topic has no streak yet (nothing to hide), and closed/collapsed when
+  // one already exists — reopened via the gear icon.
+  const [streakEditing, setStreakEditing] = useState(false)
+
   const [activeQuestionCount, setActiveQuestionCount] = useState(0)
 
-  // Quiz progress for whichever topic is currently open. Not part of the
-  // dummy data model itself — resets whenever a new topic opens or
-  // "Refresh questions" is tapped.
+  // Demo-only difficulty picker — not connected to anything yet. Once the
+  // backend exists, this would control which difficulty of questions get
+  // pulled/generated for the topic.
+  const [questionLevel, setQuestionLevel] = useState<QuestionLevel>('beginner')
+
+  // Quiz progress for whichever topic is currently open. Resets whenever a
+  // new topic opens, "Refresh questions" is tapped, or the streak's
+  // date/goal changes.
   const [questionStates, setQuestionStates] = useState<Record<string, QuestionState>>({})
 
-  // "Need more info? Ask AI" selection mode — lets the person check off
-  // which questions they want to hand to the AI instead of asking about
-  // the whole topic at once.
+  // "Need more info? Ask AI" selection mode
   const [askAiMode, setAskAiMode] = useState(false)
   const [selectedQuestionIds, setSelectedQuestionIds] = useState<Record<string, boolean>>({})
 
@@ -96,44 +129,41 @@ function tasks() {
   const selectedField = fieldsData.find((field) => field.id === selectedFieldId) ?? null
   const selectedTopic =
     selectedField?.topics.find((topic) => topic.id === selectedTopicId) ?? null
+  const currentStreak = selectedTopic ? streaks[selectedTopic.id] ?? null : null
 
-  const upcomingTasks = fieldsData
+  // Topics that currently have an active streak.
+  const streakingTopics = fieldsData
     .flatMap((field) =>
       field.topics
-        .filter((topic) => topic.completionDate)
-        .map((topic) => ({ ...topic, fieldName: field.name, fieldId: field.id }))
+        .filter((topic) => streaks[topic.id])
+        .map((topic) => ({ ...topic, fieldName: field.name, fieldId: field.id, streak: streaks[topic.id] }))
     )
-    .sort((a, b) => (a.completionDate! < b.completionDate! ? -1 : 1))
+    .sort((a, b) => (a.streak.completionDate < b.streak.completionDate ? -1 : 1))
 
-  // Reset quiz progress, question count, and ask-AI selection every time a
-  // different topic opens.
+  // Reset quiz progress, difficulty, ask-AI selection, and the streak
+  // draft form every time a different topic opens.
   useEffect(() => {
     setQuestionStates({})
     setAskAiMode(false)
     setSelectedQuestionIds({})
+    setQuestionLevel('beginner')
+
+    const streak = selectedTopic ? streaks[selectedTopic.id] : undefined
     const total = selectedTopic?.questions.length ?? 0
-    setActiveQuestionCount(total)
-    setQuestionCountInput(total > 0 ? String(total) : '')
+
+    if (streak) {
+      setDraftCompletionDate(streak.completionDate)
+      setDraftDailyGoalInput(String(streak.dailyGoalQuestions))
+      setActiveQuestionCount(Math.min(streak.dailyGoalQuestions, total))
+      setStreakEditing(false) // collapsed — nothing to hide yet if there's no streak
+    } else {
+      setDraftCompletionDate('')
+      setDraftDailyGoalInput('')
+      setActiveQuestionCount(total)
+      setStreakEditing(true) // no streak yet, so the setup form is what shows
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTopicId])
-
-  function updateTopic(topicId: string, updater: (topic: Topic) => Topic) {
-    setFieldsData((prev) =>
-      prev.map((field) => ({
-        ...field,
-        topics: field.topics.map((topic) =>
-          topic.id === topicId ? updater(topic) : topic
-        ),
-      }))
-    )
-  }
-
-  function saveCompletionDate(topicId: string) {
-    if (!dateDraftValue.trim()) return
-    updateTopic(topicId, (topic) => ({ ...topic, completionDate: dateDraftValue.trim() }))
-    setDateDraftTopicId(null)
-    setDateDraftValue('')
-  }
 
   function updateUserAnswer(questionId: string, text: string) {
     setQuestionStates((prev) => ({
@@ -144,9 +174,7 @@ function tasks() {
 
   function submitAnswer(questionId: string, correctAnswer: string) {
     const typed = questionStates[questionId]?.userAnswer ?? ''
-
-    // See checkAnswerAgainstKey above — this doesn't do anything yet.
-    checkAnswerAgainstKey(typed, correctAnswer)
+    checkAnswerAgainstKey(typed, correctAnswer) // see note above — not wired up yet
 
     setQuestionStates((prev) => ({
       ...prev,
@@ -162,11 +190,7 @@ function tasks() {
   function dontKnowAnswer(questionId: string) {
     setQuestionStates((prev) => ({
       ...prev,
-      [questionId]: {
-        ...(prev[questionId] ?? EMPTY_QUESTION_STATE),
-        submitted: false,
-        revealed: true,
-      },
+      [questionId]: { ...(prev[questionId] ?? EMPTY_QUESTION_STATE), submitted: false, revealed: true },
     }))
   }
 
@@ -181,25 +205,13 @@ function tasks() {
     setQuestionStates({})
   }
 
-  function applyQuestionCount() {
-    if (!selectedTopic) return
-    const parsed = parseInt(questionCountInput, 10)
-    if (isNaN(parsed) || parsed < 0) return
-    setActiveQuestionCount(Math.min(parsed, selectedTopic.questions.length))
-    setQuestionStates({})
-  }
-
   function generateNewQuestions() {
-    // Dummy — will call the AI question-generation endpoint later.
     Alert.alert(
       'Coming soon',
       'AI-generated questions for this topic will show up here once the backend is connected. For now, use Refresh to answer the existing questions again.'
     )
   }
 
-  // Dummy handoff for a single question's "click to know more" / "go
-  // deeper" link — no real AI wiring yet, just routes to the chat tab
-  // with the question as context.
   function askAiAboutQuestion(questionText: string) {
     router.push({
       pathname: '/chat',
@@ -216,9 +228,6 @@ function tasks() {
     setSelectedQuestionIds((prev) => ({ ...prev, [questionId]: !prev[questionId] }))
   }
 
-  // Dummy handoff for the multi-question picker — bundles the selected
-  // questions into one prefill and routes to chat. Same story: real
-  // backend wiring comes later.
   function askAiAboutSelectedQuestions() {
     if (!selectedTopic) return
     const selected = selectedTopic.questions.filter((q) => selectedQuestionIds[q.id])
@@ -232,6 +241,75 @@ function tasks() {
     setSelectedQuestionIds({})
   }
 
+  // ---------- Streak actions ----------
+
+  // Only creates/updates once both fields are filled AND this is pressed.
+  // If the date or daily goal actually changed from what's stored, the
+  // streak's progress resets.
+  function confirmStreak() {
+    if (!selectedTopic) return
+    const trimmedDate = draftCompletionDate.trim()
+    const parsedGoal = parseInt(draftDailyGoalInput, 10)
+    if (!trimmedDate || isNaN(parsedGoal) || parsedGoal <= 0) return
+
+    const existing = streaks[selectedTopic.id]
+    const changed =
+      !existing ||
+      existing.completionDate !== trimmedDate ||
+      existing.dailyGoalQuestions !== parsedGoal
+
+    setStreaks((prev) => ({
+      ...prev,
+      [selectedTopic.id]: {
+        topicId: selectedTopic.id,
+        userId: user.userId,
+        dailyGoalQuestions: parsedGoal,
+        completionDate: trimmedDate,
+        createdAt: existing && !changed ? existing.createdAt : todayISO(),
+      },
+    }))
+
+    if (changed) {
+      setActiveQuestionCount(Math.min(parsedGoal, selectedTopic.questions.length))
+      setQuestionStates({}) // reset progress — the date or goal actually moved
+    }
+    setStreakEditing(false)
+  }
+
+  function cancelStreakEdit() {
+    if (!currentStreak) return
+    setDraftCompletionDate(currentStreak.completionDate)
+    setDraftDailyGoalInput(String(currentStreak.dailyGoalQuestions))
+    setStreakEditing(false)
+  }
+
+  function dropStreak() {
+    if (!selectedTopic) return
+    Alert.alert(
+      'Drop this streak?',
+      "This clears your lock-in date and daily goal for this topic, and resets your progress.",
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Drop streak',
+          style: 'destructive',
+          onPress: () => {
+            setStreaks((prev) => {
+              const next = { ...prev }
+              delete next[selectedTopic.id]
+              return next
+            })
+            setDraftCompletionDate('')
+            setDraftDailyGoalInput('')
+            setActiveQuestionCount(selectedTopic.questions.length)
+            setQuestionStates({})
+            setStreakEditing(true)
+          },
+        },
+      ]
+    )
+  }
+
   // ---------- Topic quiz view (full screen) ----------
 
   if (selectedTopic && selectedField) {
@@ -240,7 +318,8 @@ function tasks() {
       (q) => questionStates[q.id] && questionStates[q.id].status !== 'unanswered'
     ).length
     const selectedCount = Object.values(selectedQuestionIds).filter(Boolean).length
-    const isEditingDate = dateDraftTopicId === selectedTopic.id
+    const lockInDays = currentStreak ? daysUntil(currentStreak.completionDate) : null
+    const canConfirmStreak = draftCompletionDate.trim() !== '' && parseInt(draftDailyGoalInput, 10) > 0
 
     return (
       <KeyboardAvoidingView
@@ -248,16 +327,16 @@ function tasks() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
-        <ScrollView
-          contentContainerStyle={styles.content}
-          keyboardShouldPersistTaps="handled"
-        >
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <TouchableOpacity onPress={() => setSelectedTopicId(null)} style={styles.backRow}>
             <Text style={styles.backArrow}>‹</Text>
             <Text style={styles.backLabel}>Back to {selectedField.name}</Text>
           </TouchableOpacity>
 
           <Text style={styles.title}>{selectedTopic.topicName}</Text>
+          {selectedTopic.description ? (
+            <Text style={styles.topicDescription}>{selectedTopic.description}</Text>
+          ) : null}
           {questionsToShow.length > 0 ? (
             <Text style={styles.subtitle}>
               {answeredCount}/{questionsToShow.length} answered
@@ -266,91 +345,136 @@ function tasks() {
             <Text style={styles.subtitle}>No questions yet</Text>
           )}
 
-          {/* Target date */}
-          <View style={styles.card}>
-            <Text style={styles.questionsLabel}>
-              How long will it take you to take on an analysis test of your skills of 20
-              questions, 250 questions?
-            </Text>
-            {selectedTopic.completionDate ? (
-              <Text style={styles.topicMeta}>
-                Target · {formatDate(selectedTopic.completionDate)}
-                {daysUntil(selectedTopic.completionDate) >= 0
-                  ? `  ·  ${daysUntil(selectedTopic.completionDate)}d left`
-                  : '  ·  overdue'}
-              </Text>
-            ) : (
-              <Text style={styles.topicMetaMuted}>No target date set</Text>
-            )}
-
-            {isEditingDate ? (
-              <View style={[styles.inlineRow, { marginTop: 10 }]}>
-                <TextInput
-                  placeholder="YYYY-MM-DD"
-                  placeholderTextColor="#6B6B6B"
-                  value={dateDraftValue}
-                  onChangeText={setDateDraftValue}
-                  style={styles.inlineInput}
-                  autoCapitalize="none"
-                />
+          {/* Streak card — collapsed summary, edit form, or setup form */}
+          {currentStreak && !streakEditing ? (
+            <View style={styles.card}>
+              <View style={styles.streakHeaderRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.streakActiveLabel}>🔥 Streak active</Text>
+                  <Text style={styles.topicMeta}>
+                    Locked in until {formatDate(currentStreak.completionDate)}
+                    {lockInDays !== null &&
+                      (lockInDays >= 0
+                        ? `  ·  ${lockInDays} day${lockInDays === 1 ? '' : 's'} left`
+                        : '  ·  overdue')}
+                  </Text>
+                  <Text style={styles.topicMetaMuted}>
+                    {currentStreak.dailyGoalQuestions} question
+                    {currentStreak.dailyGoalQuestions === 1 ? '' : 's'}/day
+                  </Text>
+                </View>
                 <TouchableOpacity
-                  style={styles.smallButton}
-                  onPress={() => saveCompletionDate(selectedTopic.id)}
+                  style={styles.iconButton}
+                  onPress={() => setStreakEditing(true)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
-                  <Text style={styles.smallButtonText}>Save</Text>
+                  <Settings size={20} color={TEXT_SECONDARY} />
                 </TouchableOpacity>
               </View>
-            ) : (
-              <TouchableOpacity
-                style={styles.secondaryAction}
-                onPress={() => {
-                  setDateDraftTopicId(selectedTopic.id)
-                  setDateDraftValue(selectedTopic.completionDate ?? '')
-                }}
-              >
-                <Text style={styles.secondaryActionText}>
-                  {selectedTopic.completionDate ? 'Change target date' : '+ Set target date'}
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
+            </View>
+          ) : (
+            <View style={styles.card}>
+              <Text style={styles.questionsLabel}>
+                {currentStreak ? 'Update your streak' : 'Start a streak for this topic'}
+              </Text>
+              <Text style={[styles.topicMetaMuted, { marginBottom: 12 }]}>
+                {currentStreak
+                  ? 'Changing the date or daily goal resets your progress on this streak.'
+                  : 'Set a lock-in date and a daily goal, then confirm to start your streak.'}
+              </Text>
 
-          {/* How many questions */}
-          <View style={styles.card}>
-            <Text style={styles.questionsLabel}>How many questions would you like?</Text>
-            <View style={styles.inlineRow}>
+              <Text style={[styles.questionsLabel, { marginBottom: 6 }]}>
+                How long do you want to be locked into this topic?
+              </Text>
               <TextInput
-                placeholder="e.g. 10"
+                placeholder="YYYY-MM-DD"
                 placeholderTextColor="#6B6B6B"
-                value={questionCountInput}
-                onChangeText={setQuestionCountInput}
+                value={draftCompletionDate}
+                onChangeText={setDraftCompletionDate}
+                autoCapitalize="none"
+                style={[styles.inlineInput, { marginBottom: 14 }]}
+              />
+
+              <Text style={[styles.questionsLabel, { marginBottom: 6 }]}>
+                What's your daily goal for how many questions you want to answer per day?
+              </Text>
+              <TextInput
+                placeholder="e.g. 3"
+                placeholderTextColor="#6B6B6B"
+                value={draftDailyGoalInput}
+                onChangeText={setDraftDailyGoalInput}
                 keyboardType="number-pad"
                 style={styles.inlineInput}
               />
-              <TouchableOpacity style={styles.smallButton} onPress={applyQuestionCount}>
-                <Text style={styles.smallButtonText}>Set</Text>
-              </TouchableOpacity>
+              <Text style={[styles.topicMetaMuted, { marginTop: 8 }]}>
+                {selectedTopic.questions.length} question
+                {selectedTopic.questions.length === 1 ? '' : 's'} available right now — once the
+                backend's connected this can pull from a much bigger bank.
+              </Text>
+
+              <View style={[styles.inlineRow, { marginTop: 16 }]}>
+                {currentStreak && (
+                  <TouchableOpacity style={styles.smallButtonGhost} onPress={cancelStreakEdit}>
+                    <Text style={styles.smallButtonGhostText}>Cancel</Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity
+                  style={[styles.smallButton, !canConfirmStreak && styles.smallButtonDisabled]}
+                  onPress={confirmStreak}
+                  disabled={!canConfirmStreak}
+                >
+                  <Text
+                    style={[
+                      styles.smallButtonText,
+                      !canConfirmStreak && styles.smallButtonTextDisabled,
+                    ]}
+                  >
+                    {currentStreak ? 'Save changes' : 'Start streak'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {currentStreak && (
+                <TouchableOpacity style={styles.dropButton} onPress={dropStreak}>
+                  <Text style={styles.dropButtonText}>Drop this streak</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+
+          {/* Difficulty — demo only */}
+          <View style={styles.card}>
+            <Text style={styles.questionsLabel}>Question difficulty</Text>
+            <View style={styles.levelRow}>
+              {QUESTION_LEVELS.map((level) => {
+                const active = questionLevel === level
+                return (
+                  <TouchableOpacity
+                    key={level}
+                    style={[styles.levelPill, active && styles.levelPillActive]}
+                    onPress={() => setQuestionLevel(level)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[styles.levelPillText, active && styles.levelPillTextActive]}>
+                      {level.charAt(0).toUpperCase() + level.slice(1)}
+                    </Text>
+                  </TouchableOpacity>
+                )
+              })}
             </View>
             <Text style={[styles.topicMetaMuted, { marginTop: 8 }]}>
-              {selectedTopic.questions.length} question
-              {selectedTopic.questions.length === 1 ? '' : 's'} available right now — once the
-              backend's connected this can pull from a much bigger bank.
+              Demo only for now — once connected, this will change the difficulty of the
+              questions you get.
             </Text>
           </View>
 
-          {/* "Need more info" — enters ask-AI selection mode instead of asking right away */}
           {!askAiMode && (
-            <TouchableOpacity
-              style={styles.askAiCard}
-              onPress={toggleAskAiMode}
-              activeOpacity={0.8}
-            >
+            <TouchableOpacity style={styles.askAiCard} onPress={toggleAskAiMode} activeOpacity={0.8}>
               <Text style={styles.askAiText}>💬 Need more info? Ask AI</Text>
               <Text style={styles.chevron}>›</Text>
             </TouchableOpacity>
           )}
 
-          {/* Refresh / generate new questions */}
           {!askAiMode && (
             <View style={[styles.inlineRow, { marginTop: 16 }]}>
               <TouchableOpacity style={styles.smallButtonGhost} onPress={resetQuiz}>
@@ -365,11 +489,9 @@ function tasks() {
           {askAiMode ? (
             <>
               <Text style={styles.sectionHeading}>Select questions to ask AI</Text>
-
               {questionsToShow.length === 0 && (
                 <Text style={styles.emptyText}>No questions yet for this topic.</Text>
               )}
-
               {questionsToShow.map((q) => {
                 const checked = !!selectedQuestionIds[q.id]
                 return (
@@ -386,7 +508,6 @@ function tasks() {
                   </TouchableOpacity>
                 )
               })}
-
               <View style={[styles.inlineRow, { marginTop: 16 }]}>
                 <TouchableOpacity style={styles.smallButtonGhost} onPress={toggleAskAiMode}>
                   <Text style={styles.smallButtonGhostText}>Cancel</Text>
@@ -410,14 +531,11 @@ function tasks() {
           ) : (
             <>
               <Text style={styles.sectionHeading}>Questions ({questionsToShow.length})</Text>
-
               {questionsToShow.length === 0 && (
                 <Text style={styles.emptyText}>No questions yet for this topic.</Text>
               )}
-
               {questionsToShow.map((q, index) => {
                 const state = questionStates[q.id] ?? EMPTY_QUESTION_STATE
-
                 return (
                   <View key={q.id} style={styles.quizCard}>
                     <Text style={styles.quizIndex}>Q{index + 1}</Text>
@@ -451,9 +569,7 @@ function tasks() {
                     ) : (
                       <>
                         {state.submitted && state.userAnswer.trim() !== '' && (
-                          <Text style={styles.userAnswerText}>
-                            Your answer: {state.userAnswer}
-                          </Text>
+                          <Text style={styles.userAnswerText}>Your answer: {state.userAnswer}</Text>
                         )}
                         <Text style={styles.answerText}>{q.answer}</Text>
 
@@ -476,9 +592,7 @@ function tasks() {
                           <View>
                             <Text
                               style={
-                                state.status === 'correct'
-                                  ? styles.statusCorrect
-                                  : styles.statusIncorrect
+                                state.status === 'correct' ? styles.statusCorrect : styles.statusIncorrect
                               }
                             >
                               {state.status === 'correct' ? 'You got it right' : 'You got it wrong'}
@@ -490,9 +604,7 @@ function tasks() {
                             >
                               <Text style={styles.aiHintIcon}>🤖</Text>
                               <Text style={styles.aiHintText}>
-                                {state.status === 'correct'
-                                  ? 'Ask AI to go deeper'
-                                  : 'Click to know more'}
+                                {state.status === 'correct' ? 'Ask AI to go deeper' : 'Click to know more'}
                               </Text>
                             </TouchableOpacity>
                           </View>
@@ -530,34 +642,37 @@ function tasks() {
           {selectedField.topics.length} topic{selectedField.topics.length === 1 ? '' : 's'}
         </Text>
 
-        {selectedField.topics.map((topic) => (
-          <TouchableOpacity
-            key={topic.id}
-            style={styles.card}
-            onPress={() => setSelectedTopicId(topic.id)}
-            activeOpacity={0.8}
-          >
-            <View style={styles.topicHeaderRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.topicName}>{topic.topicName}</Text>
-                {topic.completionDate ? (
-                  <Text style={styles.topicMeta}>
-                    Target · {formatDate(topic.completionDate)}
-                    {daysUntil(topic.completionDate) >= 0
-                      ? `  ·  ${daysUntil(topic.completionDate)}d left`
-                      : '  ·  overdue'}
+        {selectedField.topics.map((topic) => {
+          const streak = streaks[topic.id]
+          return (
+            <TouchableOpacity
+              key={topic.id}
+              style={styles.card}
+              onPress={() => setSelectedTopicId(topic.id)}
+              activeOpacity={0.8}
+            >
+              <View style={styles.topicHeaderRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.topicName}>{topic.topicName}</Text>
+                  {streak ? (
+                    <Text style={styles.topicMeta}>
+                      🔥 Locked in · {formatDate(streak.completionDate)}
+                      {daysUntil(streak.completionDate) >= 0
+                        ? `  ·  ${daysUntil(streak.completionDate)}d left`
+                        : '  ·  overdue'}
+                    </Text>
+                  ) : (
+                    <Text style={styles.topicMetaMuted}>No streak set</Text>
+                  )}
+                  <Text style={styles.fieldMeta}>
+                    {topic.questions.length} question{topic.questions.length === 1 ? '' : 's'}
                   </Text>
-                ) : (
-                  <Text style={styles.topicMetaMuted}>No target date set</Text>
-                )}
-                <Text style={styles.fieldMeta}>
-                  {topic.questions.length} question{topic.questions.length === 1 ? '' : 's'}
-                </Text>
+                </View>
+                <Text style={styles.chevron}>›</Text>
               </View>
-              <Text style={styles.chevron}>›</Text>
-            </View>
-          </TouchableOpacity>
-        ))}
+            </TouchableOpacity>
+          )
+        })}
       </ScrollView>
     )
   }
@@ -566,69 +681,95 @@ function tasks() {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Select a field of choice</Text>
+      <View>
+        <View style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Text style={styles.title}>Select a field of choice</Text>
+          {hideFields ? (
+            <ChevronRight size={24} color="white" onPress={() => setHideFields(false)} />
+          ) : (
+            <ChevronDown size={24} color="white" onPress={() => setHideFields(true)} />
+          )}
+        </View>
+        {!hideFields && (
+          <>
+            <TextInput
+              placeholder="Search for the field you want"
+              placeholderTextColor="#6B6B6B"
+              value={searchInput}
+              onChangeText={setSearchInput}
+              autoCapitalize="none"
+              style={styles.searchInput}
+            />
 
-      <TextInput
-        placeholder="Search for the field you want"
-        placeholderTextColor="#6B6B6B"
-        value={searchInput}
-        onChangeText={setSearchInput}
-        autoCapitalize="none"
-        style={styles.searchInput}
-      />
+            <View style={styles.fieldList}>
+              {filteredFields.map((field) => {
+                const streakCount = field.topics.filter((t) => streaks[t.id]).length
+                return (
+                  <TouchableOpacity
+                    key={field.id}
+                    style={styles.fieldCard}
+                    onPress={() => setSelectedFieldId(field.id)}
+                    activeOpacity={0.8}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.fieldName}>{field.name}</Text>
+                      <Text style={styles.fieldMeta}>
+                        {field.topics.length} topic{field.topics.length === 1 ? '' : 's'}
+                        {streakCount > 0 ? `  ·  ${streakCount} streaking` : ''}
+                      </Text>
+                    </View>
+                    <Text style={styles.chevron}>›</Text>
+                  </TouchableOpacity>
+                )
+              })}
 
-      <View style={styles.fieldList}>
-        {filteredFields.map((field) => {
-          const setCount = field.topics.filter((t) => t.completionDate).length
-          return (
-            <TouchableOpacity
-              key={field.id}
-              style={styles.fieldCard}
-              onPress={() => setSelectedFieldId(field.id)}
-              activeOpacity={0.8}
-            >
-              <View style={{ flex: 1 }}>
-                <Text style={styles.fieldName}>{field.name}</Text>
-                <Text style={styles.fieldMeta}>
-                  {field.topics.length} topic{field.topics.length === 1 ? '' : 's'}
-                  {setCount > 0 ? `  ·  ${setCount} scheduled` : ''}
-                </Text>
-              </View>
-              <Text style={styles.chevron}>›</Text>
-            </TouchableOpacity>
-          )
-        })}
-
-        {filteredFields.length === 0 && (
-          <Text style={styles.emptyText}>No fields match "{searchInput}".</Text>
+              {filteredFields.length === 0 && (
+                <Text style={styles.emptyText}>No fields match "{searchInput}".</Text>
+              )}
+            </View>
+          </>
         )}
       </View>
 
-      {/* Current tasks */}
-      <Text style={styles.sectionHeading}>Upcoming</Text>
-      <View style={styles.taskList}>
-        {upcomingTasks.length === 0 && (
-          <Text style={styles.emptyText}>Set a target date on a topic to see it here.</Text>
+      {/* Topics working on — topics with an active streak */}
+      <View style={{ marginTop: 24 }}>
+        <View style={{ display: 'flex', flexDirection: 'row', flex: 1, justifyContent: 'space-between', alignItems: 'center' }}>
+          <Text style={styles.title}>Topics working on</Text>
+          {hideActiveTasks ? (
+            <ChevronRight size={24} color="white" onPress={() => setHideActiveTasks(false)} />
+          ) : (
+            <ChevronDown size={24} color="white" onPress={() => setHideActiveTasks(true)} />
+          )}
+        </View>
+        {!hideActiveTasks && (
+          <View style={styles.taskList}>
+            {streakingTopics.length === 0 && (
+              <Text style={styles.emptyText}>Start a streak on a topic to see it here.</Text>
+            )}
+            {streakingTopics.map((task) => (
+              <TouchableOpacity
+                key={task.id}
+                style={styles.taskCard}
+                onPress={() => {
+                  setSelectedFieldId(task.fieldId)
+                  setSelectedTopicId(task.id)
+                }}
+                activeOpacity={0.8}
+              >
+                <View style={styles.taskDot} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.taskTitle}>{task.topicName}</Text>
+                  <Text style={styles.taskMeta}>
+                    {task.fieldName} · locked in until {formatDate(task.streak.completionDate)}
+                    {daysUntil(task.streak.completionDate) >= 0
+                      ? `  ·  ${daysUntil(task.streak.completionDate)}d left`
+                      : '  ·  overdue'}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
         )}
-        {upcomingTasks.map((task) => (
-          <TouchableOpacity
-            key={task.id}
-            style={styles.taskCard}
-            onPress={() => {
-              setSelectedFieldId(task.fieldId)
-              setSelectedTopicId(task.id)
-            }}
-            activeOpacity={0.8}
-          >
-            <View style={styles.taskDot} />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.taskTitle}>{task.topicName}</Text>
-              <Text style={styles.taskMeta}>
-                {task.fieldName} · {formatDate(task.completionDate!)}
-              </Text>
-            </View>
-          </TouchableOpacity>
-        ))}
       </View>
     </ScrollView>
   )
@@ -649,40 +790,14 @@ const DISABLED_BG = '#2A2A2A'
 const DISABLED_TEXT = '#6E6E6E'
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: BG,
-  },
-  content: {
-    padding: 20,
-    paddingBottom: 48,
-  },
-  title: {
-    color: TEXT_PRIMARY,
-    fontSize: 26,
-    fontWeight: '700',
-    marginBottom: 4,
-  },
-  subtitle: {
-    color: TEXT_SECONDARY,
-    fontSize: 14,
-    marginBottom: 20,
-  },
-  backRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  backArrow: {
-    color: ACCENT,
-    fontSize: 22,
-    marginRight: 4,
-  },
-  backLabel: {
-    color: ACCENT,
-    fontSize: 15,
-    fontWeight: '500',
-  },
+  screen: { flex: 1, backgroundColor: BG },
+  content: { padding: 20, paddingBottom: 48 },
+  title: { color: TEXT_PRIMARY, fontSize: 24, fontWeight: '700', marginBottom: 4 },
+  subtitle: { color: TEXT_SECONDARY, fontSize: 14, marginBottom: 20 },
+  topicDescription: { color: TEXT_SECONDARY, fontSize: 14, marginBottom: 8 },
+  backRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
+  backArrow: { color: ACCENT, fontSize: 22, marginRight: 4 },
+  backLabel: { color: ACCENT, fontSize: 15, fontWeight: '500' },
   searchInput: {
     backgroundColor: CARD_BG,
     borderWidth: 1,
@@ -694,9 +809,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     marginBottom: 20,
   },
-  fieldList: {
-    gap: 12,
-  },
+  fieldList: { gap: 12 },
   fieldCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -707,36 +820,12 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 18,
   },
-  fieldName: {
-    color: TEXT_PRIMARY,
-    fontSize: 17,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  fieldMeta: {
-    color: TEXT_SECONDARY,
-    fontSize: 13,
-  },
-  chevron: {
-    color: TEXT_MUTED,
-    fontSize: 22,
-    marginLeft: 8,
-  },
-  emptyText: {
-    color: TEXT_MUTED,
-    fontSize: 14,
-    paddingVertical: 8,
-  },
-  sectionHeading: {
-    color: TEXT_PRIMARY,
-    fontSize: 20,
-    fontWeight: '700',
-    marginTop: 24,
-    marginBottom: 12,
-  },
-  taskList: {
-    gap: 10,
-  },
+  fieldName: { color: TEXT_PRIMARY, fontSize: 17, fontWeight: '600', marginBottom: 4 },
+  fieldMeta: { color: TEXT_SECONDARY, fontSize: 13 },
+  chevron: { color: TEXT_MUTED, fontSize: 22, marginLeft: 8 },
+  emptyText: { color: TEXT_MUTED, fontSize: 14, paddingVertical: 8 },
+  sectionHeading: { color: TEXT_PRIMARY, fontSize: 20, fontWeight: '700', marginTop: 24, marginBottom: 12 },
+  taskList: { gap: 10 },
   taskCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -747,23 +836,9 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 16,
   },
-  taskDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: ACCENT,
-    marginRight: 12,
-  },
-  taskTitle: {
-    color: TEXT_PRIMARY,
-    fontSize: 15,
-    fontWeight: '600',
-    marginBottom: 2,
-  },
-  taskMeta: {
-    color: TEXT_SECONDARY,
-    fontSize: 13,
-  },
+  taskDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: ACCENT, marginRight: 12 },
+  taskTitle: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600', marginBottom: 2 },
+  taskMeta: { color: TEXT_SECONDARY, fontSize: 13 },
   card: {
     backgroundColor: CARD_BG,
     borderWidth: 1,
@@ -773,38 +848,11 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     marginBottom: 12,
   },
-  topicHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  topicName: {
-    color: TEXT_PRIMARY,
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  topicMeta: {
-    color: ACCENT,
-    fontSize: 13,
-  },
-  topicMetaMuted: {
-    color: TEXT_MUTED,
-    fontSize: 13,
-  },
-  secondaryAction: {
-    paddingVertical: 6,
-    marginTop: 8,
-  },
-  secondaryActionText: {
-    color: ACCENT,
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  inlineRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
+  topicHeaderRow: { flexDirection: 'row', alignItems: 'center' },
+  topicName: { color: TEXT_PRIMARY, fontSize: 16, fontWeight: '600', marginBottom: 4 },
+  topicMeta: { color: ACCENT, fontSize: 13 },
+  topicMetaMuted: { color: TEXT_MUTED, fontSize: 13 },
+  inlineRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   inlineInput: {
     flex: 1,
     backgroundColor: '#1A1A1A',
@@ -816,23 +864,10 @@ const styles = StyleSheet.create({
     color: TEXT_PRIMARY,
     fontSize: 14,
   },
-  smallButton: {
-    backgroundColor: ACCENT,
-    borderRadius: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 9,
-  },
-  smallButtonDisabled: {
-    backgroundColor: DISABLED_BG,
-  },
-  smallButtonText: {
-    color: '#1A1200',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  smallButtonTextDisabled: {
-    color: DISABLED_TEXT,
-  },
+  smallButton: { backgroundColor: ACCENT, borderRadius: 10, paddingHorizontal: 16, paddingVertical: 9 },
+  smallButtonDisabled: { backgroundColor: DISABLED_BG },
+  smallButtonText: { color: '#1A1200', fontSize: 14, fontWeight: '700' },
+  smallButtonTextDisabled: { color: DISABLED_TEXT },
   smallButtonGhost: {
     borderRadius: 10,
     paddingHorizontal: 16,
@@ -840,17 +875,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: CARD_BORDER,
   },
-  smallButtonGhostText: {
-    color: TEXT_SECONDARY,
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  questionsLabel: {
-    color: TEXT_SECONDARY,
-    fontSize: 13,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
+  smallButtonGhostText: { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600' },
+  questionsLabel: { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600', marginBottom: 8 },
+  streakHeaderRow: { flexDirection: 'row', alignItems: 'center' },
+  streakActiveLabel: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '700', marginBottom: 4 },
+  iconButton: { padding: 4, marginLeft: 8 },
+  dropButton: { alignItems: 'center', marginTop: 14, paddingVertical: 4 },
+  dropButtonText: { color: RED, fontSize: 13, fontWeight: '600' },
   askAiCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -862,12 +893,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginBottom: 4,
   },
-  askAiText: {
-    flex: 1,
-    color: ACCENT,
-    fontSize: 15,
-    fontWeight: '600',
-  },
+  askAiText: { flex: 1, color: ACCENT, fontSize: 15, fontWeight: '600' },
   checkboxRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -889,21 +915,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  checkboxChecked: {
-    backgroundColor: ACCENT,
-    borderColor: ACCENT,
-  },
-  checkboxMark: {
-    color: '#1A1200',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  checkboxLabel: {
+  checkboxChecked: { backgroundColor: ACCENT, borderColor: ACCENT },
+  checkboxMark: { color: '#1A1200', fontSize: 14, fontWeight: '700' },
+  checkboxLabel: { flex: 1, color: TEXT_PRIMARY, fontSize: 14, fontWeight: '500' },
+  levelRow: { flexDirection: 'row', gap: 8 },
+  levelPill: {
     flex: 1,
-    color: TEXT_PRIMARY,
-    fontSize: 14,
-    fontWeight: '500',
+    alignItems: 'center',
+    borderRadius: 10,
+    paddingVertical: 9,
+    borderWidth: 1,
+    borderColor: CARD_BORDER,
+    backgroundColor: '#1A1A1A',
   },
+  levelPillActive: { backgroundColor: ACCENT, borderColor: ACCENT },
+  levelPillText: { color: TEXT_SECONDARY, fontSize: 13, fontWeight: '600' },
+  levelPillTextActive: { color: '#1A1200' },
   quizCard: {
     backgroundColor: CARD_BG,
     borderWidth: 1,
@@ -912,19 +939,8 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 12,
   },
-  quizIndex: {
-    color: TEXT_MUTED,
-    fontSize: 12,
-    fontWeight: '700',
-    marginBottom: 6,
-    letterSpacing: 0.5,
-  },
-  questionText: {
-    color: TEXT_PRIMARY,
-    fontSize: 15,
-    fontWeight: '600',
-    marginBottom: 10,
-  },
+  quizIndex: { color: TEXT_MUTED, fontSize: 12, fontWeight: '700', marginBottom: 6, letterSpacing: 0.5 },
+  questionText: { color: TEXT_PRIMARY, fontSize: 15, fontWeight: '600', marginBottom: 10 },
   formInput: {
     backgroundColor: '#1A1A1A',
     borderWidth: 1,
@@ -938,62 +954,16 @@ const styles = StyleSheet.create({
     minHeight: 44,
     textAlignVertical: 'top',
   },
-  userAnswerText: {
-    color: TEXT_SECONDARY,
-    fontSize: 13,
-    fontStyle: 'italic',
-    marginTop: 8,
-  },
-  answerText: {
-    color: TEXT_SECONDARY,
-    fontSize: 14,
-    marginTop: 6,
-    marginBottom: 12,
-    lineHeight: 20,
-  },
-  gradeButtonCorrect: {
-    backgroundColor: GREEN,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-  },
-  gradeButtonIncorrect: {
-    backgroundColor: RED,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-  },
-  gradeButtonText: {
-    color: '#0A0A0A',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  statusCorrect: {
-    color: GREEN,
-    fontSize: 13,
-    fontWeight: '600',
-    marginTop: 4,
-  },
-  statusIncorrect: {
-    color: RED,
-    fontSize: 13,
-    fontWeight: '600',
-    marginTop: 4,
-  },
-  aiHintRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  aiHintIcon: {
-    fontSize: 16,
-    marginRight: 6,
-  },
-  aiHintText: {
-    color: ACCENT,
-    fontSize: 13,
-    fontWeight: '600',
-  },
+  userAnswerText: { color: TEXT_SECONDARY, fontSize: 13, fontStyle: 'italic', marginTop: 8 },
+  answerText: { color: TEXT_SECONDARY, fontSize: 14, marginTop: 6, marginBottom: 12, lineHeight: 20 },
+  gradeButtonCorrect: { backgroundColor: GREEN, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 9 },
+  gradeButtonIncorrect: { backgroundColor: RED, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 9 },
+  gradeButtonText: { color: '#0A0A0A', fontSize: 13, fontWeight: '700' },
+  statusCorrect: { color: GREEN, fontSize: 13, fontWeight: '600', marginTop: 4 },
+  statusIncorrect: { color: RED, fontSize: 13, fontWeight: '600', marginTop: 4 },
+  aiHintRow: { flexDirection: 'row', alignItems: 'center', marginTop: 8 },
+  aiHintIcon: { fontSize: 16, marginRight: 6 },
+  aiHintText: { color: ACCENT, fontSize: 13, fontWeight: '600' },
 })
 
 export default tasks

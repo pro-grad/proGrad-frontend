@@ -8,6 +8,8 @@ import {
   ScrollView,
 } from "react-native";
 
+import SocialFeed from "../components/SocialFeed";
+
 // ==================================================
 // CALENDAR FUNCTIONS
 // ==================================================
@@ -172,6 +174,9 @@ export default function DashBoardScreen({ navigation }) {
             </View>
           </View>
 
+          {/* SOCIAL FEED */}
+          <SocialFeed />
+          
           {/* UPCOMING TASK */}
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Upcoming</Text>

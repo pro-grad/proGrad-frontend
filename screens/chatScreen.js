@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
 import {
   View,
   StyleSheet,
@@ -9,60 +9,59 @@ import {
   TouchableOpacity,
   Text,
   ScrollView,
+  ActivityIndicator,
 } from "react-native";
-import { WebView } from "react-native-webview";
 
-const AI_ENGINE_URL = "https://6f5345d8.aiengine-2hm.pages.dev/";
+// Change port/IP according to environment
+const OLLAMA_URL =
+  Platform.OS === "android"
+    ? "http://10.0.2.2:11434/api/generate"
+    : "http://localhost:11434/api/generate";
+
+// Target GGUF model name loaded in Ollama
+const MODEL_NAME = "prograd";
 
 export default function ChatScreen() {
   const [messages, setMessages] = useState([]);
   const [messageText, setMessageText] = useState("");
-  const [status, setStatus] = useState("Initializing Engine...");
+  const [status, setStatus] = useState("Model Ready");
+  const [loading, setLoading] = useState(false);
 
-  const webViewRef = useRef(null);
-
-  const handleWebViewMessage = (event) => {
-    try {
-      const data = JSON.parse(event.nativeEvent.data);
-
-      if (data.status === "ready" || data.type === "STATUS") {
-        setStatus("Model Ready");
-      } else if (data.status === "start" || data.status === "update") {
-        setStatus("Processing...");
-      } else if (data.status === "complete" || data.type === "AI_RESPONSE") {
-        const responseText =
-          typeof data.output === "string"
-            ? data.output
-            : JSON.stringify(data.output || data.text || data.payload);
-
-        setMessages((prev) => [
-          ...prev,
-          { sender: "ai", text: responseText },
-        ]);
-        setStatus("Model Ready");
-      }
-    } catch (e) {
-      if (typeof event.nativeEvent.data === "string") {
-        setMessages((prev) => [
-          ...prev,
-          { sender: "ai", text: event.nativeEvent.data },
-        ]);
-        setStatus("Model Ready");
-      }
-    }
-  };
-
-  const sendMessage = () => {
-    if (!messageText.trim()) return;
+  const sendMessage = async () => {
+    if (!messageText.trim() || loading) return;
 
     const userPrompt = messageText.trim();
-
     setMessages((prev) => [...prev, { sender: "user", text: userPrompt }]);
     setMessageText("");
     setStatus("Processing...");
+    setLoading(true);
 
-    if (webViewRef.current) {
-      webViewRef.current.postMessage(userPrompt);
+    try {
+      const response = await fetch(OLLAMA_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: MODEL_NAME,
+          prompt: userPrompt,
+          stream: false,
+        }),
+      });
+
+      const data = await response.json();
+
+      setMessages((prev) => [
+        ...prev,
+        { sender: "ai", text: data.response },
+      ]);
+      setStatus("Model Ready");
+    } catch (error) {
+      setMessages((prev) => [
+        ...prev,
+        { sender: "ai", text: "Error connecting to local Ollama instance." },
+      ]);
+      setStatus("Connection Error");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -102,43 +101,33 @@ export default function ChatScreen() {
             onChangeText={setMessageText}
             multiline
             textAlignVertical="center"
+            editable={!loading}
           />
 
           <TouchableOpacity
             style={[
               styles.sendButton,
-              messageText.trim().length === 0 && styles.sendButtonDisabled,
+              (messageText.trim().length === 0 || loading) &&
+                styles.sendButtonDisabled,
             ]}
             onPress={sendMessage}
-            disabled={messageText.trim().length === 0}
+            disabled={messageText.trim().length === 0 || loading}
             activeOpacity={0.7}
           >
-            <Text style={styles.sendIcon}>↑</Text>
+            {loading ? (
+              <ActivityIndicator color="black" size="small" />
+            ) : (
+              <Text style={styles.sendIcon}>↑</Text>
+            )}
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
-
-      <View style={styles.hiddenContainer}>
-        <WebView
-          ref={webViewRef}
-          source={{ uri: AI_ENGINE_URL }}
-          onMessage={handleWebViewMessage}
-          domStorageEnabled={true}
-          javaScriptEnabled={true}
-          cacheEnabled={true}
-          allowFileAccess={true}
-          originWhitelist={["*"]}
-        />
-      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  autogeneral: {
-    flex: 1,
-    backgroundColor: "black",
-  },
+  autogeneral: { flex: 1, backgroundColor: "black" },
   statusHeader: {
     paddingVertical: 8,
     alignItems: "center",
@@ -146,17 +135,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#222222",
   },
-  statusText: {
-    color: "#888888",
-    fontSize: 13,
-  },
-  keyboardView: {
-    flex: 1,
-  },
-  chatArea: {
-    flex: 1,
-    width: "100%",
-  },
+  statusText: { color: "#888888", fontSize: 13 },
+  keyboardView: { flex: 1 },
+  chatArea: { flex: 1, width: "100%" },
   chatContent: {
     alignItems: "center",
     paddingTop: 20,
@@ -195,9 +176,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  sendButtonDisabled: {
-    opacity: 0.3,
-  },
+  sendButtonDisabled: { opacity: 0.3 },
   sendIcon: {
     color: "black",
     fontSize: 25,
@@ -226,14 +205,5 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#1f1f1f",
   },
-  chatText: {
-    color: "white",
-    fontSize: 15,
-    lineHeight: 20,
-  },
-  hiddenContainer: {
-    width: 0,
-    height: 0,
-    opacity: 0,
-  },
+  chatText: { color: "white", fontSize: 15, lineHeight: 20 },
 });

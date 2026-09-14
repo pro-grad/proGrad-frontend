@@ -1,22 +1,22 @@
 // lib/data.ts
 
 // ---------- Types ----------
-// Shaped to mirror the SQL schema: proField / topic / questions / streak /
-// UserAnswer tables. Still pure dummy data — no backend calls yet.
-// Note: `streak` is now its own table (topicId + userId, not a field on
-// topic), so a topic can exist with zero, or one, active streak.
+// Shaped to mirror the SQL schema: proField / topic / questions / questionLevel /
+// streak / Note / UserAnswer tables. Still pure dummy data — no backend calls yet.
+// Note: `streak` is its own table (streakId pk, topicId + userId fks, levelId fk),
+// not a field on topic — a topic can have zero or one active streak.
 
 export type Question = {
   id: string // quesId
   question: string
   answer: string
-  improve?: string // matches the "improve" column in the questions table — unused for now
+  levelId?: string // fk to questionLevel — not assigned on dummy questions yet
+  improve?: string // matches the "improve" column — unused for now
 }
 
 export type Topic = {
   id: string // topicId
   proFieldId: string
-  studentId: string
   topicName: string // name
   description: string
   createdAt: string
@@ -29,13 +29,37 @@ export type ProField = {
   topics: Topic[]
 }
 
+export type QuestionLevel = {
+  id: string // levelId
+  name: string
+  description?: string
+}
+
 export type Streak = {
+  id: string // streakId
   topicId: string
   userId: string
   dailyGoalQuestions: number // dailyGoalQues
-  completionDate: string // the "locked in until" date
+  completionDate: string // the "locked in until" date — always a real date, never a day count
+  levelId: string // fk to questionLevel — decided by the AI, not the user
   createdAt: string
 }
+
+export type Note = {
+  topicId: string
+  noteBlob: string
+  createdAt: string
+}
+
+// ---------- Dummy lookup: question levels ----------
+// Mirrors the questionLevel table. The user never picks from these directly
+// anymore — a streak's levelId gets set by the AI (randomized here for now).
+
+export const questionLevels: QuestionLevel[] = [
+  { id: 'lvl-beginner', name: 'Beginner', description: 'Foundational concepts and definitions.' },
+  { id: 'lvl-intermediate', name: 'Intermediate', description: 'Applied understanding and common scenarios.' },
+  { id: 'lvl-expert', name: 'Expert', description: 'Edge cases, tradeoffs, and deep specifics.' },
+]
 
 // ---------- Dummy data ----------
 // Frontend-only — swapped for real API calls once the Rust backend + DB
@@ -52,7 +76,6 @@ export const initialFieldsData: ProField[] = [
       {
         id: '03843',
         proFieldId: '223423',
-        studentId: STUDENT_ID,
         topicName: 'Cloud Architecture',
         description: 'Core concepts behind designing and scaling cloud systems.',
         createdAt: CREATED_AT,
@@ -68,7 +91,6 @@ export const initialFieldsData: ProField[] = [
       {
         id: '03844',
         proFieldId: '223423',
-        studentId: STUDENT_ID,
         topicName: 'Data Structures & Algorithms',
         description: 'Fundamentals for technical interviews and efficient code.',
         createdAt: CREATED_AT,
@@ -84,7 +106,6 @@ export const initialFieldsData: ProField[] = [
       {
         id: '03845',
         proFieldId: '223423',
-        studentId: STUDENT_ID,
         topicName: 'System Design',
         description: 'Designing systems that scale reliably under load.',
         createdAt: CREATED_AT,
@@ -106,7 +127,6 @@ export const initialFieldsData: ProField[] = [
       {
         id: '04001',
         proFieldId: '223424',
-        studentId: STUDENT_ID,
         topicName: 'Financial Statements',
         description: 'Reading and understanding the core financial reports.',
         createdAt: CREATED_AT,
@@ -122,7 +142,6 @@ export const initialFieldsData: ProField[] = [
       {
         id: '04002',
         proFieldId: '223424',
-        studentId: STUDENT_ID,
         topicName: 'Double-Entry Bookkeeping',
         description: 'The mechanics of keeping balanced books.',
         createdAt: CREATED_AT,
@@ -138,7 +157,6 @@ export const initialFieldsData: ProField[] = [
       {
         id: '04003',
         proFieldId: '223424',
-        studentId: STUDENT_ID,
         topicName: 'Tax Fundamentals',
         description: 'The basics of how individual and business tax works.',
         createdAt: CREATED_AT,
@@ -154,7 +172,6 @@ export const initialFieldsData: ProField[] = [
       {
         id: '04004',
         proFieldId: '223424',
-        studentId: STUDENT_ID,
         topicName: 'Auditing Principles',
         description: 'How independent audits verify financial accuracy.',
         createdAt: CREATED_AT,
@@ -176,7 +193,6 @@ export const initialFieldsData: ProField[] = [
       {
         id: '05001',
         proFieldId: '223425',
-        studentId: STUDENT_ID,
         topicName: 'Strategic Planning',
         description: 'Setting long-term direction for an organization.',
         createdAt: CREATED_AT,
@@ -192,7 +208,6 @@ export const initialFieldsData: ProField[] = [
       {
         id: '05002',
         proFieldId: '223425',
-        studentId: STUDENT_ID,
         topicName: 'Operations Management',
         description: 'Running the production of goods and services efficiently.',
         createdAt: CREATED_AT,
@@ -208,7 +223,6 @@ export const initialFieldsData: ProField[] = [
       {
         id: '05003',
         proFieldId: '223425',
-        studentId: STUDENT_ID,
         topicName: 'Leadership & Team Building',
         description: 'Leading, motivating, and developing people.',
         createdAt: CREATED_AT,
@@ -230,7 +244,6 @@ export const initialFieldsData: ProField[] = [
       {
         id: '06001',
         proFieldId: '223426',
-        studentId: STUDENT_ID,
         topicName: 'Market Research',
         description: 'Understanding customers, trends, and competitors.',
         createdAt: CREATED_AT,
@@ -246,7 +259,6 @@ export const initialFieldsData: ProField[] = [
       {
         id: '06002',
         proFieldId: '223426',
-        studentId: STUDENT_ID,
         topicName: 'Branding & Positioning',
         description: 'Defining who a brand is and how it stands out.',
         createdAt: CREATED_AT,
@@ -262,7 +274,6 @@ export const initialFieldsData: ProField[] = [
       {
         id: '06003',
         proFieldId: '223426',
-        studentId: STUDENT_ID,
         topicName: 'Digital Advertising',
         description: 'Running and measuring ads online.',
         createdAt: CREATED_AT,
@@ -284,7 +295,6 @@ export const initialFieldsData: ProField[] = [
       {
         id: '07001',
         proFieldId: '223427',
-        studentId: STUDENT_ID,
         topicName: 'Patient Assessment',
         description: "Evaluating a patient's overall health status.",
         createdAt: CREATED_AT,
@@ -300,7 +310,6 @@ export const initialFieldsData: ProField[] = [
       {
         id: '07002',
         proFieldId: '223427',
-        studentId: STUDENT_ID,
         topicName: 'Pharmacology Basics',
         description: "How drugs work in the body and how they're administered.",
         createdAt: CREATED_AT,
@@ -316,7 +325,6 @@ export const initialFieldsData: ProField[] = [
       {
         id: '07003',
         proFieldId: '223427',
-        studentId: STUDENT_ID,
         topicName: 'Infection Control',
         description: 'Preventing the spread of infection in care settings.',
         createdAt: CREATED_AT,
@@ -338,7 +346,6 @@ export const initialFieldsData: ProField[] = [
       {
         id: '08001',
         proFieldId: '223428',
-        studentId: STUDENT_ID,
         topicName: 'Contract Law',
         description: 'What makes an agreement legally enforceable.',
         createdAt: CREATED_AT,
@@ -354,7 +361,6 @@ export const initialFieldsData: ProField[] = [
       {
         id: '08002',
         proFieldId: '223428',
-        studentId: STUDENT_ID,
         topicName: 'Constitutional Law',
         description: 'How government power is structured and limited.',
         createdAt: CREATED_AT,
@@ -370,7 +376,6 @@ export const initialFieldsData: ProField[] = [
       {
         id: '08003',
         proFieldId: '223428',
-        studentId: STUDENT_ID,
         topicName: 'Legal Writing & Research',
         description: 'Structuring legal analysis and finding authority.',
         createdAt: CREATED_AT,
@@ -388,19 +393,25 @@ export const initialFieldsData: ProField[] = [
 ]
 
 // ---------- Dummy streaks ----------
-// Mirrors the separate `streak` table (topicId + userId, its own row —
-// not a field on topic). A handful of topics start with an active streak;
+// Mirrors the `streak` table (streakId pk, topicId/userId/levelId fks). A
+// handful of topics start with an active streak already assigned a level;
 // the rest have none until the user sets one up.
 
 export const initialStreaksData: Streak[] = [
-  { topicId: '03843', userId: STUDENT_ID, dailyGoalQuestions: 3, completionDate: '2026-09-14', createdAt: CREATED_AT },
-  { topicId: '03845', userId: STUDENT_ID, dailyGoalQuestions: 2, completionDate: '2026-09-20', createdAt: CREATED_AT },
-  { topicId: '04001', userId: STUDENT_ID, dailyGoalQuestions: 3, completionDate: '2026-09-11', createdAt: CREATED_AT },
-  { topicId: '04003', userId: STUDENT_ID, dailyGoalQuestions: 3, completionDate: '2026-09-18', createdAt: CREATED_AT },
-  { topicId: '05002', userId: STUDENT_ID, dailyGoalQuestions: 3, completionDate: '2026-09-25', createdAt: CREATED_AT },
-  { topicId: '05003', userId: STUDENT_ID, dailyGoalQuestions: 2, completionDate: '2026-09-16', createdAt: CREATED_AT },
-  { topicId: '06001', userId: STUDENT_ID, dailyGoalQuestions: 2, completionDate: '2026-09-13', createdAt: CREATED_AT },
-  { topicId: '07001', userId: STUDENT_ID, dailyGoalQuestions: 3, completionDate: '2026-09-17', createdAt: CREATED_AT },
-  { topicId: '07003', userId: STUDENT_ID, dailyGoalQuestions: 2, completionDate: '2026-09-22', createdAt: CREATED_AT },
-  { topicId: '08002', userId: STUDENT_ID, dailyGoalQuestions: 3, completionDate: '2026-09-19', createdAt: CREATED_AT },
+  { id: 'streak-03843', topicId: '03843', userId: STUDENT_ID, dailyGoalQuestions: 3, completionDate: '2026-09-14', levelId: 'lvl-intermediate', createdAt: CREATED_AT },
+  { id: 'streak-03845', topicId: '03845', userId: STUDENT_ID, dailyGoalQuestions: 2, completionDate: '2026-09-20', levelId: 'lvl-beginner', createdAt: CREATED_AT },
+  { id: 'streak-04001', topicId: '04001', userId: STUDENT_ID, dailyGoalQuestions: 3, completionDate: '2026-09-11', levelId: 'lvl-expert', createdAt: CREATED_AT },
+  { id: 'streak-04003', topicId: '04003', userId: STUDENT_ID, dailyGoalQuestions: 3, completionDate: '2026-09-18', levelId: 'lvl-intermediate', createdAt: CREATED_AT },
+  { id: 'streak-05002', topicId: '05002', userId: STUDENT_ID, dailyGoalQuestions: 3, completionDate: '2026-09-25', levelId: 'lvl-beginner', createdAt: CREATED_AT },
+  { id: 'streak-05003', topicId: '05003', userId: STUDENT_ID, dailyGoalQuestions: 2, completionDate: '2026-09-16', levelId: 'lvl-intermediate', createdAt: CREATED_AT },
+  { id: 'streak-06001', topicId: '06001', userId: STUDENT_ID, dailyGoalQuestions: 2, completionDate: '2026-09-13', levelId: 'lvl-expert', createdAt: CREATED_AT },
+  { id: 'streak-07001', topicId: '07001', userId: STUDENT_ID, dailyGoalQuestions: 3, completionDate: '2026-09-17', levelId: 'lvl-beginner', createdAt: CREATED_AT },
+  { id: 'streak-07003', topicId: '07003', userId: STUDENT_ID, dailyGoalQuestions: 2, completionDate: '2026-09-22', levelId: 'lvl-intermediate', createdAt: CREATED_AT },
+  { id: 'streak-08002', topicId: '08002', userId: STUDENT_ID, dailyGoalQuestions: 3, completionDate: '2026-09-19', levelId: 'lvl-expert', createdAt: CREATED_AT },
 ]
+
+// ---------- Dummy notes ----------
+// Mirrors the `Note` table (topicId, noteBlob, createdAt). Left empty on
+// purpose — the notes tab just needs the option to exist for now.
+
+export const initialNotesData: Note[] = []

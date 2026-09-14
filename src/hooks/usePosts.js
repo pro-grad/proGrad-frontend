@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { Alert } from "react-native";
 import * as ImagePicker from "expo-image-picker";
+import * as FileSystem from "expo-file-system/legacy";
+import { decode } from "base64-arraybuffer";
 import { supabase } from "../../screens/supabase";
 
 export function usePosts() {
@@ -69,14 +71,26 @@ export function usePosts() {
 
     try {
       setIsUploading(true);
+
+      const { data: { user } } = await supabase.auth.getUser();
+      const userName =
+        user?.user_metadata?.full_name ||
+        user?.user_metadata?.name ||
+        user?.email?.split("@")[0] ||
+        "ProGrad User";
+
       const fileName = `${Date.now()}.${mediaAsset.ext}`;
 
-      const response = await fetch(mediaAsset.uri);
-      const fileBlob = await response.blob();
+      const base64 = await FileSystem.readAsStringAsync(mediaAsset.uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
 
       const { error: storageError } = await supabase.storage
         .from("post-images")
-        .upload(fileName, fileBlob, { contentType: mediaAsset.mimeType, upsert: true });
+        .upload(fileName, decode(base64), {
+          contentType: mediaAsset.mimeType,
+          upsert: true,
+        });
 
       if (storageError) throw new Error(storageError.message);
 
@@ -84,7 +98,7 @@ export function usePosts() {
 
       const { data: newPost, error: dbError } = await supabase
         .from("posts")
-        .insert([{ title, image_url: urlData.publicUrl }])
+        .insert([{ title, image_url: urlData.publicUrl, user_name: userName }])
         .select()
         .single();
 

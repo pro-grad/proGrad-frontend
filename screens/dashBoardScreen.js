@@ -10,6 +10,8 @@ import {
   TextInput,
   Image,
   ActivityIndicator,
+  StatusBar,
+  Platform,
 } from "react-native";
 
 // Sub-components & hooks from src/
@@ -21,6 +23,11 @@ const monthNames = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December"
 ];
+
+const STATIC_CONFIG = {
+  avatar: "https://picsum.photos/100",
+  tags: ["C++", "Finance"],
+};
 
 export default function DashBoardScreen() {
   const { posts, isLoadingFeed, isUploading, pickMedia, createPost } = usePosts();
@@ -72,10 +79,24 @@ export default function DashBoardScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="#000" />
       <View style={styles.dashboard}>
+        {/* Header - Dynamic height with safe padding */}
         <View style={styles.dashboardHeader}>
+          <View style={styles.brandContainer}>
+            <Image
+              source={require("../assets/logo.png")}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+            <Text style={styles.separator}>|</Text>
+            <Text style={styles.brandTitle}>PROGRAD</Text>
+          </View>
+
           <Pressable style={styles.addButton} onPress={() => setIsModalVisible(true)}>
-            <Text style={styles.addIcon}>+</Text>
+            <View style={styles.addButtonInner}>
+              <Text style={styles.addIcon}>+</Text>
+            </View>
           </Pressable>
         </View>
 
@@ -141,6 +162,21 @@ export default function DashBoardScreen() {
 
                 return (
                   <View key={post.id} style={styles.postCard}>
+                    {/* Author Header */}
+                    <View style={styles.authorHeader}>
+                      <Image source={{ uri: STATIC_CONFIG.avatar }} style={styles.authorAvatar} />
+                      <View style={styles.authorInfo}>
+                        <Text style={styles.authorName}>{post.user_name || "ProGrad User"}</Text>
+                        <View style={styles.tagContainer}>
+                          {STATIC_CONFIG.tags.map((tag, idx) => (
+                            <View key={idx} style={styles.tagBadge}>
+                              <Text style={styles.tagText}>{tag}</Text>
+                            </View>
+                          ))}
+                        </View>
+                      </View>
+                    </View>
+
                     <Text style={styles.postTitle}>{post.title}</Text>
 
                     {post.image_url && (
@@ -203,9 +239,57 @@ export default function DashBoardScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#000" },
   dashboard: { flex: 1, backgroundColor: "#000" },
-  dashboardHeader: { height: 60, paddingHorizontal: 20, justifyContent: "center", alignItems: "flex-end" },
-  addButton: { padding: 5 },
-  addIcon: { color: "#fff", fontSize: 32, fontWeight: "300" },
+  dashboardHeader: {
+    paddingHorizontal: 20,
+    paddingTop: Platform.OS === "android" ? (StatusBar.currentHeight || 0) + 12 : 20,
+    paddingBottom: 12,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  brandContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  logo: {
+    width: 60,
+    height: 60,
+  },
+  separator: {
+    color: "#333",
+    fontSize: 20,
+    fontWeight: "300",
+    marginHorizontal: 10,
+  },
+  brandTitle: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 2,
+  },
+  addButton: {
+    backgroundColor: "#fff",
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    padding: 2,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  addButtonInner: {
+    backgroundColor: "#222",
+    width: "100%",
+    height: "100%",
+    borderRadius: 17,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  addIcon: {
+    color: "#fff",
+    fontSize: 22,
+    fontWeight: "300",
+    lineHeight: 24,
+  },
   dashboardContent: { paddingHorizontal: 20, paddingBottom: 20 },
   greeting: { color: "#fff", fontSize: 32, fontWeight: "600", marginTop: 10 },
   dashboardSubtitle: { color: "#999", fontSize: 15, marginTop: 8, marginBottom: 25 },
@@ -225,6 +309,16 @@ const styles = StyleSheet.create({
   feedHeading: { color: "#fff", fontSize: 20, fontWeight: "600", marginBottom: 15 },
   emptyFeedText: { color: "#666", textAlign: "center", marginTop: 20 },
   postCard: { backgroundColor: "#080808", borderWidth: 1, borderColor: "#292929", borderRadius: 15, padding: 15, marginBottom: 15 },
+  
+  // Author Header Styles
+  authorHeader: { flexDirection: "row", alignItems: "center", marginBottom: 12 },
+  authorAvatar: { width: 36, height: 36, borderRadius: 18, marginRight: 10, backgroundColor: "#222" },
+  authorInfo: { flex: 1 },
+  authorName: { color: "#fff", fontSize: 13, fontWeight: "600", marginBottom: 3 },
+  tagContainer: { flexDirection: "row", flexWrap: "wrap", gap: 4 },
+  tagBadge: { backgroundColor: "#141414", borderWidth: 1, borderColor: "#292929", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
+  tagText: { color: "#fff", fontSize: 10, fontWeight: "600" },
+
   postTitle: { color: "#fff", fontSize: 16, fontWeight: "600", marginBottom: 12 },
   postMedia: { width: "100%", height: 250, borderRadius: 10, marginBottom: 12 },
   actionsBar: { flexDirection: "row", alignItems: "center", marginBottom: 10 },
